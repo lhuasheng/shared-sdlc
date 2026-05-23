@@ -1,0 +1,88 @@
+name: 'AI-SDLC Weekly Review'
+description: 'Gate 3 — Claude reviews last 7 days of merged PRs and files a GitHub Issue with patterns.'
+
+inputs:
+  anthropic-api-key:
+    description: 'Anthropic API key'
+    required: true
+  github-token:
+    description: 'GitHub token with issues:write, pull-requests:read'
+    required: true
+  shared-sdlc-ref:
+    description: 'Branch/tag/SHA of shared-sdlc to read the script from'
+    required: false
+    default: 'main'
+  shared-sdlc-repo:
+    description: 'owner/repo of the shared-sdlc repository'
+    required: true
+  claude-model:
+    description: 'Claude model ID'
+    required: false
+    default: 'claude-sonnet-4-6'
+  max-prs:
+    description: 'Maximum number of PRs to include in the review'
+    required: false
+    default: '10'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Fetch shared-sdlc script
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        gh api "repos/${{ inputs.shared-sdlc-repo }}/contents/scripts/weekly-review.mjs?ref=${{ inputs.shared-sdlc-ref }}" \
+          --jq '.content' | base64 -d > weekly-review.mjs
+
+    - name: Gather last week's merged PRs
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        SINCE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+        gh pr list --repo "${{ github.repository }}" \
+          --state merged \
+          --json number,title,author,mergedAt \
+          --jq "[.[] | select(.mergedAt > \"$SINCE\")] | .[0:${{ inputs.max-prs }}]" \
+          > merged_prs.json
+        echo "Merged PRs in last 7 days: $(jq length merged_prs.json)"
+
+    - name: Fetch collect-diffs script
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        gh api "repos/${{ inputs.shared-sdlc-repo }}/contents/scripts/collect-diffs.mjs?ref=${{ inputs.shared-sdlc-ref }}" \
+          --jq '.content' | base64 -d > collect-diffs.mjs
+
+    - name: Collect diffs
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: node collect-diffs.mjs
+
+    - name: Run Claude review
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        CLAUDE_MODEL: ${{ inputs.claude-model }}
+      run: node weekly-review.mjs
+
+    - name: Post review as issue
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        WEEK=$(date +%Y-W%V)
+        gh issue create --repo "${{ github.repository }}" \
+          --title "Weekly AI Code Review — $WEEK" \
+          --body-file review_output.md \
+          --label "code-review,automated" \
+          --assignee "${{ github.repository_owner }}"

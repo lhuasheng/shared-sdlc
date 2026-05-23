@@ -1,0 +1,108 @@
+name: 'AI-SDLC CI Gates'
+description: 'Gate 4 — runs lint, tests, PR-size, security, and spec-link checks. Configurable per project stack.'
+
+inputs:
+  node-version:
+    description: 'Node version (set to empty to skip Node setup for non-Node stacks)'
+    required: false
+    default: '20'
+  lint-cmd:
+    description: 'Lint command (set empty to skip)'
+    required: false
+    default: 'npm run lint'
+  typecheck-cmd:
+    description: 'Type-check command (set empty to skip)'
+    required: false
+    default: 'npm run typecheck'
+  test-cmd:
+    description: 'Test command with coverage (set empty to skip)'
+    required: false
+    default: 'npm run test:coverage'
+  install-cmd:
+    description: 'Dependency install command'
+    required: false
+    default: 'npm ci'
+  max-pr-lines:
+    description: 'Max changed lines per PR (excluding lock/generated files)'
+    required: false
+    default: '400'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node
+      if: inputs.node-version != ''
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      if: inputs.install-cmd != ''
+      shell: bash
+      run: ${{ inputs.install-cmd }}
+
+    - name: Lint
+      if: inputs.lint-cmd != ''
+      shell: bash
+      run: ${{ inputs.lint-cmd }}
+
+    - name: Type check
+      if: inputs.typecheck-cmd != ''
+      shell: bash
+      run: ${{ inputs.typecheck-cmd }}
+
+    - name: Tests with coverage
+      if: inputs.test-cmd != ''
+      shell: bash
+      run: ${{ inputs.test-cmd }}
+
+    - name: Upload coverage
+      if: always() && inputs.test-cmd != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage/
+        if-no-files-found: ignore
+
+    - name: PR size check
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        git fetch origin "${{ github.base_ref }}" --depth=1
+        LINES=$(git diff --stat "origin/${{ github.base_ref }}...HEAD" \
+          -- ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' ':!poetry.lock' \
+             ':!*.snap' ':!dist/*' ':!build/*' ':!*.generated.*' \
+          | tail -1 | awk '{print $4+$6}')
+        LINES=${LINES:-0}
+        echo "Changed lines: $LINES (limit: ${{ inputs.max-pr-lines }})"
+        if [ "$LINES" -gt "${{ inputs.max-pr-lines }}" ]; then
+          echo "::error::PR has $LINES changed lines (limit ${{ inputs.max-pr-lines }}). Split it."
+          exit 1
+        fi
+
+    - name: Audit dependencies
+      if: inputs.install-cmd != '' && contains(inputs.install-cmd, 'npm')
+      shell: bash
+      run: npm audit --audit-level=high
+
+    - name: Scan for secrets
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+        extra_args: --only-verified
+
+    - name: Spec linkage check
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        BODY: ${{ github.event.pull_request.body }}
+      run: |
+        if echo "$BODY" | grep -qiE '(closes|fixes|resolves) #[0-9]+'; then
+          echo "PR references an issue"
+        else
+          echo "::error::PR must reference an issue: 'Closes #NNN' in the description."
+          exit 1
+        fi
