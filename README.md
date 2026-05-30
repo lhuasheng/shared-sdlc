@@ -24,7 +24,7 @@ scripts/
 ## How a project repo uses these
 
 Project repos contain **thin caller workflows** (~15 lines each) that invoke
-the composite actions. See `project-1/.github/workflows/` for working examples.
+the composite actions. See `project-template/.github/workflows/` for working examples.
 
 ```yaml
 # project-1/.github/workflows/ci.yml

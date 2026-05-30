@@ -1,0 +1,74 @@
+name: 'AI-SDLC Repo Setup'
+description: 'Creates all standard labels for a new project repo. Run once via workflow_dispatch.'
+
+inputs:
+  github-token:
+    description: 'GitHub token with issues:write (for label creation)'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create standard labels
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+      run: |
+        create_label() {
+          local name="$1" color="$2" desc="$3"
+          gh label create "$name" --color "$color" --description "$desc" --repo "$REPO" 2>/dev/null \
+            && echo "✅ Created: $name" \
+            || echo "⏭️  Already exists: $name"
+        }
+
+        echo "Setting up labels for $REPO..."
+
+        # ── AI-SDLC workflow labels ─────────────────────────────────────────
+        create_label "code-review"   "0075ca" "AI or human code review activity"
+        create_label "automated"     "e4e669" "Created by an automated workflow"
+
+        # ── Gate labels ─────────────────────────────────────────────────────
+        create_label "gate-1-spec"   "d4c5f9" "Waiting for spec approval (Gate 1)"
+        create_label "gate-5-deploy" "bfd4f2" "Ready for production promotion (Gate 5)"
+
+        # ── Work type labels ────────────────────────────────────────────────
+        create_label "feature"       "a2eeef" "New feature or enhancement"
+        create_label "bug"           "d73a4a" "Something isn't working"
+        create_label "refactor"      "fef2c0" "Code change with no behaviour change"
+        create_label "docs"          "0052cc" "Documentation only"
+        create_label "chore"         "e4e669" "Dependency bumps, config changes"
+        create_label "security"      "ee0701" "Security vulnerability or hardening"
+
+        # ── Priority labels ──────────────────────────────────────────────────
+        create_label "P1-critical"   "b60205" "Drop everything"
+        create_label "P2-high"       "e4312b" "Next sprint"
+        create_label "P3-normal"     "fbca04" "Backlog"
+
+        # ── Status labels ────────────────────────────────────────────────────
+        create_label "needs-spec-review" "ededed" "Spec not yet approved by tech lead"
+        create_label "blocked"           "b60205" "Blocked by another issue or external dep"
+        create_label "wont-fix"          "ffffff" "Intentionally not addressing"
+
+        echo ""
+        echo "✅ All standard labels are in place."
+
+    - name: Configure branch protection on main
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+      run: |
+        echo "Configuring branch protection on main..."
+
+        gh api "repos/$REPO/branches/main/protection" \
+          --method PUT \
+          --header "Accept: application/vnd.github+json" \
+          --field required_status_checks='{"strict":true,"contexts":["CI Gates"]}' \
+          --field enforce_admins=false \
+          --field required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true}' \
+          --field restrictions=null \
+          --field allow_force_pushes=false \
+          --field allow_deletions=false \
+          2>/dev/null && echo "✅ Branch protection set on main" \
+          || echo "⚠️  Branch protection skipped (main may not exist yet — push a commit first, then re-run)"
