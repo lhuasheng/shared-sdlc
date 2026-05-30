@@ -81,6 +81,9 @@ runs:
         GH_TOKEN: ${{ inputs.github-token }}
       run: |
         WEEK=$(date +%Y-W%V)
+        # Create labels if they don't exist yet (idempotent)
+        gh label create "code-review" --color "0075ca" --repo "${{ github.repository }}" 2>/dev/null || true
+        gh label create "automated"   --color "e4e669" --repo "${{ github.repository }}" 2>/dev/null || true
         gh issue create --repo "${{ github.repository }}" \
           --title "Weekly AI Code Review — $WEEK" \
           --body-file review_output.md \
