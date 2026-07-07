@@ -155,6 +155,7 @@ Document results in a validation report.
 | Secret | Required by | Description |
 |---|---|---|
 | `GITHUB_TOKEN` | All actions | Auto-provisioned by GitHub Actions |
+| `AGENTIC_DISPATCH_TOKEN` | `dispatch-agentic` and everything that calls it | Fine-grained PAT (or GitHub App token) with `actions:write` on the agentic-workflow repo. `GITHUB_TOKEN` is scoped only to the calling repo and cannot dispatch a workflow in a different one — this is a hard platform limit, not something any permissions block can work around. |
 | `ANTHROPIC_API_KEY` | Legacy `ai-pr-review`, `weekly-review` | Deprecated; not required for agentic path |
 
 ### Action inputs reference

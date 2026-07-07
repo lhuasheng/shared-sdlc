@@ -36,12 +36,17 @@ providing safe-outputs gating.
    # After (current)
    - uses: lhuasheng/shared-sdlc/actions/ai-pr-review@v1
      with:
-       github-token: ${{ secrets.GITHUB_TOKEN }}
+       github-token: ${{ secrets.AGENTIC_DISPATCH_TOKEN }}
        agentic-workflow-repo: lhuasheng/shared-agentic
        agentic-workflow-ref: v1.0.0
    ```
 
-2. Ensure the `workflows/pr-review.md` file is available in `shared-agentic`.
+   `github-token` here needs `actions:write` on `agentic-workflow-repo` — the
+   default `secrets.GITHUB_TOKEN` is scoped only to the calling repo and
+   cannot dispatch a workflow in a different one. Use a fine-grained PAT (or
+   GitHub App token) stored as `AGENTIC_DISPATCH_TOKEN`.
+2. Ensure the compiled `pr-review.lock.yml` file is available in
+   `shared-agentic` (run `gh aw compile` there if it isn't).
 3. Remove the `ANTHROPIC_API_KEY` secret from your project repository once
    migrated.
 
