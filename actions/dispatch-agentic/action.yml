@@ -37,7 +37,7 @@ runs:
       env:
         PAYLOAD: ${{ inputs.payload }}
       run: |
-        echo "$PAYLOAD" | jq empty || {
+        printf '%s' "$PAYLOAD" | jq empty || {
           echo "::error::payload input is not valid JSON"
           exit 1
         }
