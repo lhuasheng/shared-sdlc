@@ -41,7 +41,7 @@ runs:
     # ── Agentic path (preferred) ───────────────────────────────────────────────
     - name: Dispatch pr-review agentic workflow
       if: inputs.agentic-workflow-repo != ''
-      uses: ./actions/dispatch-agentic
+      uses: ../dispatch-agentic
       with:
         github-token: ${{ inputs.github-token }}
         workflow-repo: ${{ inputs.agentic-workflow-repo }}
