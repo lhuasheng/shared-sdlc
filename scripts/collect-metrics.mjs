@@ -46,15 +46,17 @@ const mergedPrs =
 // Open PRs
 const openPrs = gh(`pr list --repo "${repo}" --state open --json number --jq 'length'`) ?? 0;
 
-// Commits in window
+// Commits in window — paginate all commits and sum counts per page
 const commitCount = parseInt(
-  ghRaw(`api "repos/${repo}/commits?since=${since}&per_page=1" --include | grep x-total | awk '{print $2}'`) || '0',
+  ghRaw(
+    `api "repos/${repo}/commits?since=${since}&per_page=100" --paginate --jq 'length' | awk '{sum += $1} END {print sum+0}'`,
+  ) || '0',
   10,
 );
 
-// Contributors in window (unique commit authors)
+// Contributors in window — unique commit author emails via paginated commit list
 const contributorsRaw = ghRaw(
-  `log --repo "${repo}" --since "${since}" --format="%ae" 2>/dev/null | sort -u | wc -l`,
+  `api "repos/${repo}/commits?since=${since}&per_page=100" --paginate --jq '.[].commit.author.email' | sort -u | wc -l | tr -d ' '`,
 );
 const contributors = parseInt(contributorsRaw || '0', 10);
 

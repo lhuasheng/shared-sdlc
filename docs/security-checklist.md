@@ -18,8 +18,9 @@ For each workflow file in `workflows/`, verify the following:
 
 ### GOV-02: Read-only agent permissions by default
 
-- [ ] `permissions.contents` is set to `read` (not `write`)
+- [ ] `permissions.contents` is set to `read` unless the workflow uses safe-outputs for `create-pull-request` (e.g. `docs-sync.md`, `release-notes.md`)
 - [ ] Write permissions (`issues: write`, `pull-requests: write`) are only present when the workflow uses safe-outputs for writes
+- [ ] Workflows that require `contents: write` (for `safe-outputs create-pull-request`) are explicitly listed as approved exceptions in this checklist
 - [ ] No `admin` permission is requested
 
 ### GOV-03: Sandboxed execution with network firewall
@@ -73,7 +74,7 @@ required frontmatter fields. The check fails if:
 
 - `agent.cost-budget.per-run-usd` is missing
 - `safe-outputs` is empty or missing
-- `permissions.contents` is not `read`
+- `permissions.contents` is not `read`, **unless** the workflow uses `safe-outputs` for `create-pull-request` (approved exception for `docs-sync.md` and `release-notes.md`)
 - `network.egress` is not `deny`
 
 ---

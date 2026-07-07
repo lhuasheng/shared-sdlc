@@ -1,7 +1,6 @@
 // Onboards a project repository to the AI-SDLC framework.
 // - Copies thin caller workflow templates to the target repo
 // - Applies the label taxonomy
-// - Enables branch protection
 // - Opens an onboarding PR
 //
 // Requires env: GH_TOKEN, TARGET_REPO (owner/repo).

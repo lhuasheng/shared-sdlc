@@ -34,8 +34,10 @@ runs:
   steps:
     - name: Validate payload is valid JSON
       shell: bash
+      env:
+        PAYLOAD: ${{ inputs.payload }}
       run: |
-        echo '${{ inputs.payload }}' | jq empty || {
+        echo "$PAYLOAD" | jq empty || {
           echo "::error::payload input is not valid JSON"
           exit 1
         }
@@ -45,14 +47,21 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
+        PAYLOAD: ${{ inputs.payload }}
       run: |
-        HTTP_STATUS=$(gh api \
+        PAYLOAD_FILE=$(mktemp)
+        echo "$PAYLOAD" > "$PAYLOAD_FILE"
+        HTTP_STATUS=$(jq -n \
+          --arg ref "${{ inputs.workflow-ref }}" \
+          --slurpfile inputs "$PAYLOAD_FILE" \
+          '{ref: $ref, inputs: $inputs[0]}' | \
+        gh api \
           --method POST \
           -H "Accept: application/vnd.github+json" \
           "repos/${{ inputs.workflow-repo }}/actions/workflows/${{ inputs.workflow-file }}/dispatches" \
-          -f ref="${{ inputs.workflow-ref }}" \
-          -f inputs='${{ inputs.payload }}' \
+          --input - \
           --silent --include 2>&1 | head -1 | awk '{print $2}' || echo "0")
+        rm -f "$PAYLOAD_FILE"
         echo "status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
         echo "Dispatched ${{ inputs.workflow-file }} to ${{ inputs.workflow-repo }}@${{ inputs.workflow-ref }} — HTTP $HTTP_STATUS"
 

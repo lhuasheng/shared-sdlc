@@ -36,10 +36,17 @@ function gh(args) {
     .trim();
 }
 
-// Fetch all issue comments on the PR
-const comments = JSON.parse(
-  gh(`api "repos/${repo}/issues/${prNumber}/comments" --jq '[.[] | {id, body}]'`),
-);
+// Fetch all issue comments on the PR with pagination
+const comments = [];
+let page = 1;
+while (true) {
+  const batch = JSON.parse(
+    gh(`api "repos/${repo}/issues/${prNumber}/comments?per_page=100&page=${page}" --jq '[.[] | {id, body}]'`),
+  );
+  comments.push(...batch);
+  if (batch.length < 100) break;
+  page++;
+}
 
 const existing = comments.find((c) => c.body.startsWith(MARKER));
 

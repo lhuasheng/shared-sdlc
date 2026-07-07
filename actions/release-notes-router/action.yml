@@ -27,14 +27,14 @@ runs:
       shell: bash
       run: |
         TAG="${{ github.ref_name }}"
-        if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+        if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
           echo "::warning::Tag $TAG does not look like a semver tag — skipping release notes dispatch"
           echo "SKIP_DISPATCH=true" >> "$GITHUB_ENV"
         fi
 
     - name: Dispatch release-notes agentic workflow
       if: env.SKIP_DISPATCH != 'true'
-      uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@main
+      uses: ./actions/dispatch-agentic
       with:
         github-token: ${{ inputs.github-token }}
         workflow-repo: ${{ inputs.agentic-workflow-repo }}

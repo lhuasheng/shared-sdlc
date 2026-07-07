@@ -63,9 +63,10 @@ runs:
       run: |
         REPO="${{ inputs.repository }}"
         SINCE=$(date -u -d '${{ inputs.lookback-days }} days ago' +%Y-%m-%dT%H:%M:%SZ)
-        # Commits on main that are not merge commits
-        DIRECT=$(gh api "repos/$REPO/commits?sha=main&since=$SINCE&per_page=100" \
-          --jq '[.[] | select(.parents | length == 1)] | length' 2>/dev/null || echo 0)
+        # Paginate through all commits and count non-merge commits (direct pushes)
+        DIRECT=$(gh api "repos/$REPO/commits?sha=main&since=$SINCE&per_page=100" --paginate \
+          --jq '[.[] | select(.parents | length == 1)] | length' 2>/dev/null \
+          | awk '{sum += $1} END {print sum+0}')
         echo "direct_push_count=$DIRECT" >> "$GITHUB_OUTPUT"
 
     - name: Check secret scanning status

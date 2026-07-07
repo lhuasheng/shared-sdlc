@@ -155,14 +155,26 @@ runs:
         COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         STARTED_AT="${{ steps.timing.outputs.started_at }}"
         CONCLUSION="success"
-        # Check if any step failed
+
+        # Normalize secret-scan step outcome to passed/failed/skipped
+        SS_OUTCOME="${SECRET_SCAN_RESULT:-}"
+        if [ "$SS_OUTCOME" = "success" ]; then
+          SS_RESULT="passed"
+        elif [ "$SS_OUTCOME" = "failure" ]; then
+          SS_RESULT="failed"
+        else
+          SS_RESULT="skipped"
+        fi
+
+        # Check if any step failed (including secret scan)
         for result in \
           "${{ steps.lint.outputs.result }}" \
           "${{ steps.typecheck.outputs.result }}" \
           "${{ steps.tests.outputs.result }}" \
           "${{ steps.pr-size.outputs.result }}" \
           "${{ steps.audit.outputs.result }}" \
-          "${{ steps.spec-link.outputs.result }}"; do
+          "${{ steps.spec-link.outputs.result }}" \
+          "$SS_RESULT"; do
           if [ "$result" = "failed" ]; then
             CONCLUSION="failure"
             break
@@ -189,7 +201,7 @@ runs:
           --arg tests "${TESTS_RESULT:-skipped}" \
           --arg prSize "${PR_SIZE_RESULT:-skipped}" \
           --arg audit "${AUDIT_RESULT:-skipped}" \
-          --arg secretScan "skipped" \
+          --arg secretScan "$SS_RESULT" \
           --arg specLink "${SPEC_LINK_RESULT:-skipped}" \
           --argjson coveragePct "$COVERAGE_PCT" \
           '{
@@ -220,6 +232,7 @@ runs:
         PR_SIZE_RESULT: ${{ steps.pr-size.outputs.result }}
         AUDIT_RESULT: ${{ steps.audit.outputs.result }}
         SPEC_LINK_RESULT: ${{ steps.spec-link.outputs.result }}
+        SECRET_SCAN_RESULT: ${{ steps.secret-scan.outcome }}
 
     - name: Publish security-report.json artifact
       if: always()
@@ -235,6 +248,14 @@ runs:
           if [ "$VULN_COUNT" -gt 0 ]; then AUDIT_PASSED=false; fi
         fi
 
+        # Derive secret-scan result from step outcome
+        SECRET_PASSED=true
+        SECRET_FINDINGS=0
+        if [ "${SECRET_SCAN_RESULT:-}" = "failure" ]; then
+          SECRET_PASSED=false
+          SECRET_FINDINGS=-1
+        fi
+
         jq -n \
           --arg runId "${{ github.run_id }}" \
           --arg repo "${{ github.repository }}" \
@@ -242,18 +263,22 @@ runs:
           --argjson prNumber "$([ '${{ github.event.pull_request.number }}' != '' ] && echo '${{ github.event.pull_request.number }}' || echo 'null')" \
           --argjson auditPassed "$AUDIT_PASSED" \
           --argjson vulnCount "$VULN_COUNT" \
+          --argjson secretPassed "$SECRET_PASSED" \
+          --argjson secretFindings "$SECRET_FINDINGS" \
           '{
             runId: ($runId | tonumber),
             repository: $repo,
             scannedAt: $scannedAt,
             prNumber: $prNumber,
-            secretScan: { passed: true, findingsCount: 0 },
+            secretScan: { passed: $secretPassed, findingsCount: $secretFindings },
             dependencyAudit: {
               passed: $auditPassed,
               vulnerabilitiesCount: $vulnCount
             }
           }' > security-report.json
         echo "security-report.json written"
+      env:
+        SECRET_SCAN_RESULT: ${{ steps.secret-scan.outcome }}
 
     - name: Upload CI summary artifact
       if: always()
