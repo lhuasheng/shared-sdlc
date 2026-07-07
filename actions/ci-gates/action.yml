@@ -253,7 +253,9 @@ runs:
         SECRET_FINDINGS=0
         if [ "${SECRET_SCAN_RESULT:-}" = "failure" ]; then
           SECRET_PASSED=false
-          SECRET_FINDINGS=-1
+          # findingsCount is 0 here because trufflehog output is not parsed;
+          # consumers should treat passed=false as the authoritative signal
+          SECRET_FINDINGS=0
         fi
 
         jq -n \

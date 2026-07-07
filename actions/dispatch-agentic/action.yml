@@ -50,6 +50,7 @@ runs:
         PAYLOAD: ${{ inputs.payload }}
       run: |
         PAYLOAD_FILE=$(mktemp)
+        trap 'rm -f "$PAYLOAD_FILE"' EXIT
         echo "$PAYLOAD" > "$PAYLOAD_FILE"
         HTTP_STATUS=$(jq -n \
           --arg ref "${{ inputs.workflow-ref }}" \
@@ -61,7 +62,6 @@ runs:
           "repos/${{ inputs.workflow-repo }}/actions/workflows/${{ inputs.workflow-file }}/dispatches" \
           --input - \
           --silent --include 2>&1 | head -1 | awk '{print $2}' || echo "0")
-        rm -f "$PAYLOAD_FILE"
         echo "status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
         echo "Dispatched ${{ inputs.workflow-file }} to ${{ inputs.workflow-repo }}@${{ inputs.workflow-ref }} — HTTP $HTTP_STATUS"
 
