@@ -1,42 +1,78 @@
 name: 'AI-SDLC On-Demand PR Review'
-description: 'Gate 3 — Claude-powered PR pre-screen. Trigger by commenting /ai-review on a PR.'
+description: >
+  Gate 3 — triggers the pr-review agentic workflow in response to an
+  /ai-review comment on a PR. Implements Integration Pattern 4 (shared-sdlc
+  dispatches agentic workflows). Falls back to the legacy Claude script if
+  agentic-workflow-repo is not set.
 
 inputs:
-  anthropic-api-key:
-    description: 'Anthropic API key'
-    required: true
   github-token:
-    description: 'GitHub token with pull-requests:write'
+    description: 'GitHub token with pull-requests:write and actions:write'
     required: true
+  agentic-workflow-repo:
+    description: 'owner/repo containing the pr-review.md agentic workflow (e.g. lhuasheng/shared-agentic). Leave empty to use the legacy script fallback.'
+    required: false
+    default: ''
+  agentic-workflow-ref:
+    description: 'Branch/tag/SHA in agentic-workflow-repo to dispatch against'
+    required: false
+    default: 'main'
+  # Legacy inputs — kept for backward compatibility; used only when agentic-workflow-repo is empty
+  anthropic-api-key:
+    description: '[DEPRECATED] Anthropic API key — only used by the legacy script fallback'
+    required: false
+    default: ''
   shared-sdlc-ref:
-    description: 'Branch/tag/SHA of shared-sdlc to read the script from'
+    description: '[DEPRECATED] Branch/tag/SHA of shared-sdlc for the legacy script fallback'
     required: false
     default: 'main'
   shared-sdlc-repo:
-    description: 'owner/repo of the shared-sdlc repository'
-    required: true
+    description: '[DEPRECATED] owner/repo of shared-sdlc for the legacy script fallback'
+    required: false
+    default: 'lhuasheng/shared-sdlc'
   claude-model:
-    description: 'Claude model ID'
+    description: '[DEPRECATED] Claude model ID for the legacy script fallback'
     required: false
     default: 'claude-sonnet-4-6'
 
 runs:
   using: 'composite'
   steps:
-    - name: Set up Node
+    # ── Agentic path (preferred) ───────────────────────────────────────────────
+    - name: Dispatch pr-review agentic workflow
+      if: inputs.agentic-workflow-repo != ''
+      uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@main
+      with:
+        github-token: ${{ inputs.github-token }}
+        workflow-repo: ${{ inputs.agentic-workflow-repo }}
+        workflow-ref: ${{ inputs.agentic-workflow-ref }}
+        workflow-file: pr-review.md
+        payload: |
+          {
+            "pr_number": "${{ github.event.issue.number }}",
+            "repository": "${{ github.repository }}",
+            "triggered_by": "${{ github.actor }}"
+          }
+
+    # ── Legacy script fallback (deprecated, kept for backward compatibility) ───
+    - name: Set up Node (legacy fallback)
+      if: inputs.agentic-workflow-repo == ''
       uses: actions/setup-node@v4
       with:
         node-version: '20'
 
-    - name: Fetch shared-sdlc script
+    - name: Fetch shared-sdlc script (legacy fallback)
+      if: inputs.agentic-workflow-repo == ''
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       run: |
+        echo "::warning::Using deprecated legacy script fallback. Set agentic-workflow-repo to use the agentic workflow."
         gh api "repos/${{ inputs.shared-sdlc-repo }}/contents/scripts/pr-review.mjs?ref=${{ inputs.shared-sdlc-ref }}" \
           --jq '.content' | base64 -d > pr-review.mjs
 
-    - name: Fetch PR diff and metadata
+    - name: Fetch PR diff and metadata (legacy fallback)
+      if: inputs.agentic-workflow-repo == ''
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
@@ -46,14 +82,16 @@ runs:
         gh pr view "$PR" --repo "${{ github.repository }}" \
           --json title,body,author,additions,deletions > pr_meta.json
 
-    - name: Run Claude review
+    - name: Run Claude review (legacy fallback)
+      if: inputs.agentic-workflow-repo == ''
       shell: bash
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         CLAUDE_MODEL: ${{ inputs.claude-model }}
       run: node pr-review.mjs
 
-    - name: Post review comment
+    - name: Post review comment (legacy fallback)
+      if: inputs.agentic-workflow-repo == ''
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}

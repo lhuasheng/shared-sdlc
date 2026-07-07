@@ -1,3 +1,8 @@
+// DEPRECATED — scheduled for removal Q4 2026.
+// Replaced by: workflows/pr-review.md (GitHub Agentic Workflow).
+// Migration: set `agentic-workflow-repo` in your actions/ai-pr-review caller.
+// See DEPRECATIONS.md for full guidance.
+//
 // Reads pr.diff and pr_meta.json from the working directory.
 // Writes review_comment.md.
 // Requires env: ANTHROPIC_API_KEY.

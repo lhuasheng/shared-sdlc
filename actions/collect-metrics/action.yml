@@ -1,0 +1,68 @@
+name: 'AI-SDLC Collect Metrics'
+description: >
+  Collects repository health metrics (open issues, merged PRs, CI success
+  rate, contributor count) and writes a metrics.json artifact conforming to
+  schemas/metrics.schema.json. Used as a pre-step by the tech-debt and
+  weekly-digest agentic workflows.
+
+inputs:
+  github-token:
+    description: 'GitHub token with actions:read, issues:read, pull-requests:read'
+    required: true
+  output-file:
+    description: 'Path to write the output metrics.json artifact'
+    required: false
+    default: 'metrics.json'
+  lookback-days:
+    description: 'Number of days to look back when computing time-windowed metrics'
+    required: false
+    default: '30'
+  repository:
+    description: 'owner/repo to collect metrics for (defaults to current repository)'
+    required: false
+    default: ${{ github.repository }}
+  shared-sdlc-repo:
+    description: 'owner/repo of shared-sdlc (used to fetch the script)'
+    required: false
+    default: 'lhuasheng/shared-sdlc'
+  shared-sdlc-ref:
+    description: 'Branch/tag/SHA of shared-sdlc to fetch the script from'
+    required: false
+    default: 'main'
+
+outputs:
+  metrics-file:
+    description: 'Path of the written metrics.json file'
+    value: ${{ inputs.output-file }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Fetch collect-metrics script
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        gh api "repos/${{ inputs.shared-sdlc-repo }}/contents/scripts/collect-metrics.mjs?ref=${{ inputs.shared-sdlc-ref }}" \
+          --jq '.content' | base64 -d > _collect-metrics.mjs
+
+    - name: Collect metrics
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ inputs.repository }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+        LOOKBACK_DAYS: ${{ inputs.lookback-days }}
+      run: node _collect-metrics.mjs
+
+    - name: Upload metrics artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: metrics
+        path: ${{ inputs.output-file }}
+        if-no-files-found: warn

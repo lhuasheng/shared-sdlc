@@ -1,0 +1,53 @@
+# .github/workflows/weekly-digest.yml
+# Thin caller workflow — Weekly Engineering Digest (Pattern 3)
+# Copy this file into your project repository's .github/workflows/ directory.
+# Requires: GITHUB_TOKEN (auto-provided)
+
+name: Weekly Digest
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+  actions: write
+
+jobs:
+  weekly-digest:
+    name: Weekly Digest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gather merged PRs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SINCE=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          gh pr list --repo "${{ github.repository }}" \
+            --state merged \
+            --json number,title,author,mergedAt \
+            --jq "[.[] | select(.mergedAt > \"$SINCE\")]" \
+            > merged_prs.json
+
+      - uses: lhuasheng/shared-sdlc/actions/collect-diffs@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: lhuasheng/shared-sdlc/actions/collect-metrics@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          workflow-repo: lhuasheng/shared-agentic
+          workflow-ref: main
+          workflow-file: weekly-digest.md
+          payload: |
+            {
+              "repository": "${{ github.repository }}"
+            }

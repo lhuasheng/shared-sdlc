@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lhuasheng/shared-sdlc/schemas/diffs.schema.json",
+  "title": "PR Diffs",
+  "description": "Array of PR diff objects produced by the collect-diffs action / script.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["pr", "title", "author", "diff"],
+    "properties": {
+      "pr": {
+        "type": "integer",
+        "description": "Pull request number"
+      },
+      "title": {
+        "type": "string",
+        "description": "Pull request title"
+      },
+      "author": {
+        "type": "string",
+        "description": "GitHub username of the PR author"
+      },
+      "mergedAt": {
+        "type": ["string", "null"],
+        "format": "date-time",
+        "description": "ISO 8601 timestamp when the PR was merged (null if unknown)"
+      },
+      "diff": {
+        "type": "string",
+        "description": "Unified diff content (truncated to MAX_DIFF_LINES lines)"
+      }
+    },
+    "additionalProperties": false
+  }
+}

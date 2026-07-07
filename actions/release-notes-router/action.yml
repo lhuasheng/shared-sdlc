@@ -1,0 +1,49 @@
+name: 'AI-SDLC Release Notes Router'
+description: >
+  Triggered when a semver tag is pushed. Dispatches the release-notes agentic
+  workflow to draft release notes as a pull request. Implements Integration
+  Pattern 4 (shared-sdlc dispatches agentic workflows).
+
+inputs:
+  github-token:
+    description: 'GitHub token with actions:write on the agentic workflow repository'
+    required: true
+  agentic-workflow-repo:
+    description: 'owner/repo containing the release-notes.md agentic workflow'
+    required: true
+  agentic-workflow-ref:
+    description: 'Branch/tag/SHA in agentic-workflow-repo to dispatch against'
+    required: false
+    default: 'main'
+  base-tag:
+    description: 'Previous tag to compare against (leave empty to auto-detect)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate semver tag
+      shell: bash
+      run: |
+        TAG="${{ github.ref_name }}"
+        if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+          echo "::warning::Tag $TAG does not look like a semver tag — skipping release notes dispatch"
+          echo "SKIP_DISPATCH=true" >> "$GITHUB_ENV"
+        fi
+
+    - name: Dispatch release-notes agentic workflow
+      if: env.SKIP_DISPATCH != 'true'
+      uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@main
+      with:
+        github-token: ${{ inputs.github-token }}
+        workflow-repo: ${{ inputs.agentic-workflow-repo }}
+        workflow-ref: ${{ inputs.agentic-workflow-ref }}
+        workflow-file: release-notes.md
+        payload: |
+          {
+            "tag": "${{ github.ref_name }}",
+            "repository": "${{ github.repository }}",
+            "base_tag": "${{ inputs.base-tag }}",
+            "triggered_by": "${{ github.actor }}"
+          }

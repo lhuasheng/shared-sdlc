@@ -1,0 +1,81 @@
+name: 'AI-SDLC Collect Diffs'
+description: >
+  Fetches the diff for every merged PR in the supplied list and writes a
+  diffs.json artifact conforming to schemas/diffs.schema.json. Wraps
+  scripts/collect-diffs.mjs for use by agentic workflows (Integration Pattern
+  2 and 3 pre-step).
+
+inputs:
+  github-token:
+    description: 'GitHub token with pull-requests:read'
+    required: true
+  merged-prs-json:
+    description: 'Path to a JSON file containing the array of merged PR objects (number, title, author, mergedAt)'
+    required: false
+    default: 'merged_prs.json'
+  output-file:
+    description: 'Path to write the output diffs.json artifact'
+    required: false
+    default: 'diffs.json'
+  max-diff-lines:
+    description: 'Maximum number of diff lines to include per PR'
+    required: false
+    default: '200'
+  repository:
+    description: 'owner/repo to fetch diffs from (defaults to current repository)'
+    required: false
+    default: ${{ github.repository }}
+  shared-sdlc-repo:
+    description: 'owner/repo of shared-sdlc (used to fetch the script when not running inside shared-sdlc itself)'
+    required: false
+    default: 'lhuasheng/shared-sdlc'
+  shared-sdlc-ref:
+    description: 'Branch/tag/SHA of shared-sdlc to fetch the script from'
+    required: false
+    default: 'main'
+
+outputs:
+  diffs-file:
+    description: 'Path of the written diffs.json file'
+    value: ${{ inputs.output-file }}
+  pr-count:
+    description: 'Number of PRs for which diffs were collected'
+    value: ${{ steps.collect.outputs.pr_count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Fetch collect-diffs script
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        gh api "repos/${{ inputs.shared-sdlc-repo }}/contents/scripts/collect-diffs.mjs?ref=${{ inputs.shared-sdlc-ref }}" \
+          --jq '.content' | base64 -d > _collect-diffs.mjs
+
+    - name: Collect diffs
+      id: collect
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ inputs.repository }}
+        INPUT_FILE: ${{ inputs.merged-prs-json }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+        MAX_DIFF_LINES: ${{ inputs.max-diff-lines }}
+      run: |
+        node _collect-diffs.mjs
+        COUNT=$(jq length "${{ inputs.output-file }}" 2>/dev/null || echo 0)
+        echo "pr_count=$COUNT" >> "$GITHUB_OUTPUT"
+        echo "Collected diffs for $COUNT PRs → ${{ inputs.output-file }}"
+
+    - name: Upload diffs artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: diffs
+        path: ${{ inputs.output-file }}
+        if-no-files-found: warn
