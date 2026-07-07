@@ -22,5 +22,5 @@ jobs:
       - uses: lhuasheng/shared-sdlc/actions/release-notes-router@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          agentic-workflow-repo: lhuasheng/shared-agentic
+          agentic-workflow-repo: lhuasheng/.github
           agentic-workflow-ref: main

@@ -44,7 +44,7 @@ jobs:
       - uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          workflow-repo: lhuasheng/shared-agentic
+          workflow-repo: lhuasheng/.github
           workflow-ref: main
           workflow-file: weekly-digest.md
           payload: |

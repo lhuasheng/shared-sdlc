@@ -1,8 +1,9 @@
 # Shared Context Layer
 
 The **shared context layer** is the contract that allows the deterministic
-**shared-sdlc** layer and the reasoning **shared-agentic** layer to exchange
-information reliably without tight coupling.
+**shared-sdlc** layer and the reasoning layer — GitHub Agentic Workflows
+hosted in `lhuasheng/.github` — to exchange information reliably without
+tight coupling.
 
 This document is the single reference for all context contracts. Any change to
 a contract in this document must also update the corresponding artefact.

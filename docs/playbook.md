@@ -29,10 +29,18 @@ Contains composite GitHub Actions and helper scripts that implement
 decisions. No agent has direct write access — all writes go through
 structured outputs.
 
-### shared-agentic (separate repository)
-Contains Markdown-based agentic workflows that perform reasoning-heavy tasks
+### Agentic workflows (hosted in `lhuasheng/.github`)
+Markdown-based GitHub Agentic Workflows that perform reasoning-heavy tasks
 like issue triage, weekly digest, documentation sync, and PR review. These
 workflows are informational and advisory — they do not block merge.
+
+The original PRD architecture proposed a standalone `shared-agentic`
+repository for these. That was superseded: the workflow files live at
+`.github/workflows/*.md` in `lhuasheng/.github` instead, since every repo in
+the org already depends on that repo for defaults and it avoids maintaining
+a fourth shared repository. `dispatch-agentic` treats the host as just a
+`workflow-repo` input, so this only affects where the files live, not how
+callers invoke them.
 
 ### Shared context layer
 The contract between the two systems: label taxonomy, PR comment marker
@@ -114,10 +122,11 @@ A composite action routes a human command or tag push to an agentic workflow.
 Ensure GitHub Copilot is enabled for your organization under
 **Settings → Copilot → Policies**.
 
-### Step 2: Bootstrap the shared-agentic repository
-Create the `shared-agentic` repository and copy the workflow files from
-`workflows/` in this repository. See `docs/environment-check.md` for
-prerequisites.
+### Step 2: Publish the agentic workflows to `lhuasheng/.github`
+Copy the workflow files from `workflows/` in this repository to
+`.github/workflows/` in `lhuasheng/.github` (they must live under
+`.github/workflows/` there for the Actions dispatch API to discover them).
+See `docs/environment-check.md` for prerequisites.
 
 ### Step 3: Onboard a project repository
 Run the onboarding script against your project repository:
@@ -125,7 +134,7 @@ Run the onboarding script against your project repository:
 ```bash
 GH_TOKEN=<admin-token> \
 TARGET_REPO=your-org/project-repo \
-AGENTIC_REPO=your-org/shared-agentic \
+AGENTIC_REPO=your-org/.github \
 node scripts/onboard-repo.mjs
 ```
 
@@ -175,7 +184,8 @@ See the README in each action directory:
 ### Agentic workflow not triggering
 1. Verify the Copilot coding agent is enabled in your organization.
 2. Check that the `actions:write` permission is granted in the caller workflow.
-3. Verify the `workflow-file` input matches the exact filename in `shared-agentic`.
+3. Verify the `workflow-file` input matches the exact filename under
+   `.github/workflows/` in `lhuasheng/.github`.
 4. Check the dispatch status output: `steps.dispatch.outputs.dispatch-status` should be `204`.
 
 ### Consolidated PR comment not appearing

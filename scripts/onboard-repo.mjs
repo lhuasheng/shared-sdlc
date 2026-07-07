@@ -5,7 +5,7 @@
 // - Opens an onboarding PR
 //
 // Requires env: GH_TOKEN, TARGET_REPO (owner/repo).
-// Optional env: AGENTIC_REPO (default: lhuasheng/shared-agentic),
+// Optional env: AGENTIC_REPO (default: lhuasheng/.github),
 //               SHARED_SDLC_REPO (default: lhuasheng/shared-sdlc),
 //               SHARED_SDLC_REF (default: main).
 
@@ -20,7 +20,7 @@ if (!targetRepo) {
   process.exit(1);
 }
 
-const agenticRepo = process.env.AGENTIC_REPO || 'lhuasheng/shared-agentic';
+const agenticRepo = process.env.AGENTIC_REPO || 'lhuasheng/.github';
 const sharedSdlcRepo = process.env.SHARED_SDLC_REPO || 'lhuasheng/shared-sdlc';
 const sharedSdlcRef = process.env.SHARED_SDLC_REF || 'main';
 const branch = `onboarding/ai-sdlc-${Date.now()}`;
@@ -79,7 +79,7 @@ for (const { file, description } of templates) {
     const decoded = Buffer.from(content, 'base64').toString('utf8');
     // Replace placeholder repo references
     const customized = decoded
-      .replace(/lhuasheng\/shared-agentic/g, agenticRepo)
+      .replace(/lhuasheng\/\.github/g, agenticRepo)
       .replace(/lhuasheng\/shared-sdlc/g, sharedSdlcRepo);
     writeFileSync(join(workflowsDir, file), customized);
     console.log(`  ✅ ${description} (${file})`);

@@ -10,7 +10,7 @@ inputs:
     description: 'GitHub token with actions:write on the agentic workflow repository'
     required: true
   workflow-repo:
-    description: 'owner/repo that contains the agentic workflow file (e.g. lhuasheng/shared-agentic)'
+    description: 'owner/repo that contains the agentic workflow file (e.g. lhuasheng/.github)'
     required: true
   workflow-ref:
     description: 'Branch, tag, or SHA in workflow-repo to dispatch against'

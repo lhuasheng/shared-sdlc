@@ -41,7 +41,7 @@ Used as a pre-step by the `tech-debt` and `weekly-digest` agentic workflows
   uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@v1
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
-    workflow-repo: lhuasheng/shared-agentic
+    workflow-repo: lhuasheng/.github
     workflow-file: tech-debt.md
     payload: '{ "metrics_artifact": "metrics" }'
 ```

@@ -1,7 +1,8 @@
 # Label Taxonomy
 
 Standardized GitHub label set used by both the **shared-sdlc** deterministic
-layer and the **shared-agentic** reasoning layer. All project repositories
+layer and the reasoning layer (GitHub Agentic Workflows hosted in
+`lhuasheng/.github`). All project repositories
 must use these labels so that automation can reliably filter, triage, and
 report on issues and pull requests.
 

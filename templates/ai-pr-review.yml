@@ -25,5 +25,5 @@ jobs:
       - uses: lhuasheng/shared-sdlc/actions/ai-pr-review@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          agentic-workflow-repo: lhuasheng/shared-agentic
+          agentic-workflow-repo: lhuasheng/.github
           agentic-workflow-ref: main

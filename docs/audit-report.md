@@ -68,7 +68,7 @@ The `shared-sdlc` repository currently implements four composite GitHub Actions 
 
 ### AGT layer gaps (agentic workflows)
 
-All agentic workflow Markdown files are missing. These belong in a separate `shared-agentic` repository per the PRD architecture. Because that repository does not yet exist, the workflow Markdown files are provisionally placed in `workflows/` within this repository and must be migrated once `shared-agentic` is bootstrapped.
+All agentic workflow Markdown files are missing. The original PRD architecture called for a separate `shared-agentic` repository; that plan was superseded in favor of hosting them in `lhuasheng/.github` (the org defaults repo already every project depends on) instead of standing up a fourth repository. The workflow Markdown files are provisionally placed in `workflows/` within this repository and must be migrated to `.github/workflows/` in `lhuasheng/.github` before dispatch will function — see `docs/playbook.md` § Adoption Step 2.
 
 | Requirement | Workflow file | Priority |
 |---|---|---|

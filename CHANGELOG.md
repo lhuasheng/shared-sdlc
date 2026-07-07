@@ -72,6 +72,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- **Agentic workflow host repository changed from `shared-agentic` to `.github`** — the PRD's original standalone `shared-agentic` repository was never bootstrapped; rather than create a fourth shared repo, agentic workflow Markdown files are now published to `.github/workflows/` in `lhuasheng/.github`, which every project repo already depends on for org defaults. All `dispatch-agentic` callers (`templates/*.yml`, `actions/ai-pr-review`, `actions/release-notes-router`) and docs now default to `lhuasheng/.github` instead of `lhuasheng/shared-agentic`.
 - `actions/ai-pr-review/action.yml` — Now dispatches to `pr-review.md` agentic workflow via `dispatch-agentic`; legacy script fallback retained for backward compatibility
 - `actions/ci-gates/action.yml` — Now publishes `ci-summary.json` and `security-report.json` artifacts on every run; individual check IDs added for structured output
 - `scripts/collect-diffs.mjs` — Now supports `INPUT_FILE`, `OUTPUT_FILE`, `MAX_DIFF_LINES` env vars; backward-compatible alias `pr_diffs.json` retained
