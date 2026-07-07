@@ -1,0 +1,109 @@
+name: 'AI-SDLC Collect Audit Data'
+description: >
+  Collects repository compliance data for use by the compliance-report agentic
+  workflow. Checks branch protection rules, secret scanning status, CODEOWNERS
+  presence, and CI configuration, then writes audit-data.json.
+
+inputs:
+  github-token:
+    description: 'GitHub token with administration:read, actions:read, contents:read'
+    required: true
+  output-file:
+    description: 'Path to write the output audit-data.json artifact'
+    required: false
+    default: 'audit-data.json'
+  repository:
+    description: 'owner/repo to audit (defaults to current repository)'
+    required: false
+    default: ${{ github.repository }}
+  lookback-days:
+    description: 'Days to look back for push-to-main detection'
+    required: false
+    default: '30'
+
+outputs:
+  audit-file:
+    description: 'Path of the written audit-data.json file'
+    value: ${{ inputs.output-file }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Collect branch protection data
+      id: branch-protection
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        REPO="${{ inputs.repository }}"
+        BP=$(gh api "repos/$REPO/branches/main/protection" 2>/dev/null || echo '{}')
+        echo "branch_protection=$(echo "$BP" | jq -c '.')" >> "$GITHUB_OUTPUT"
+
+    - name: Check for CODEOWNERS
+      id: codeowners
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        REPO="${{ inputs.repository }}"
+        HAS_CODEOWNERS=false
+        for path in "CODEOWNERS" ".github/CODEOWNERS" "docs/CODEOWNERS"; do
+          if gh api "repos/$REPO/contents/$path" &>/dev/null; then
+            HAS_CODEOWNERS=true
+            break
+          fi
+        done
+        echo "has_codeowners=$HAS_CODEOWNERS" >> "$GITHUB_OUTPUT"
+
+    - name: Check recent direct pushes to main
+      id: direct-pushes
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        REPO="${{ inputs.repository }}"
+        SINCE=$(date -u -d '${{ inputs.lookback-days }} days ago' +%Y-%m-%dT%H:%M:%SZ)
+        # Commits on main that are not merge commits
+        DIRECT=$(gh api "repos/$REPO/commits?sha=main&since=$SINCE&per_page=100" \
+          --jq '[.[] | select(.parents | length == 1)] | length' 2>/dev/null || echo 0)
+        echo "direct_push_count=$DIRECT" >> "$GITHUB_OUTPUT"
+
+    - name: Check secret scanning status
+      id: secret-scanning
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        REPO="${{ inputs.repository }}"
+        STATUS=$(gh api "repos/$REPO" --jq '.security_and_analysis.secret_scanning.status // "disabled"' 2>/dev/null || echo "unknown")
+        echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+
+    - name: Write audit-data.json
+      shell: bash
+      run: |
+        COLLECTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        jq -n \
+          --arg collectedAt "$COLLECTED_AT" \
+          --arg repo "${{ inputs.repository }}" \
+          --argjson branchProtection '${{ steps.branch-protection.outputs.branch_protection }}' \
+          --argjson hasCODEOWNERS ${{ steps.codeowners.outputs.has_codeowners }} \
+          --argjson directPushCount ${{ steps.direct-pushes.outputs.direct_push_count }} \
+          --arg secretScanningStatus '${{ steps.secret-scanning.outputs.status }}' \
+          --argjson lookbackDays ${{ inputs.lookback-days }} \
+          '{
+            collectedAt: $collectedAt,
+            repository: $repo,
+            lookbackDays: $lookbackDays,
+            branchProtection: $branchProtection,
+            hasCODEOWNERS: $hasCODEOWNERS,
+            directPushCount: $directPushCount,
+            secretScanningStatus: $secretScanningStatus
+          }' > '${{ inputs.output-file }}'
+        echo "audit-data.json written for ${{ inputs.repository }}"
+
+    - name: Upload audit data artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: audit-data
+        path: ${{ inputs.output-file }}
+        if-no-files-found: warn
