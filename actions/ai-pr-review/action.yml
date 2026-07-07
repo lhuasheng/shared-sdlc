@@ -10,7 +10,7 @@ inputs:
     description: 'GitHub token with pull-requests:write and actions:write'
     required: true
   agentic-workflow-repo:
-    description: 'owner/repo containing the pr-review.md agentic workflow (e.g. lhuasheng/shared-agentic). Leave empty to use the legacy script fallback.'
+    description: 'owner/repo containing the compiled pr-review.lock.yml agentic workflow (e.g. lhuasheng/shared-agentic). Leave empty to use the legacy script fallback.'
     required: false
     default: ''
   agentic-workflow-ref:
@@ -46,7 +46,7 @@ runs:
         github-token: ${{ inputs.github-token }}
         workflow-repo: ${{ inputs.agentic-workflow-repo }}
         workflow-ref: ${{ inputs.agentic-workflow-ref }}
-        workflow-file: pr-review.md
+        workflow-file: pr-review.lock.yml
         payload: |
           {
             "pr_number": "${{ github.event.issue.number }}",
