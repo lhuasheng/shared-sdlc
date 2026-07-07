@@ -1,0 +1,67 @@
+name: 'AI-SDLC Dispatch Agentic'
+description: >
+  Routes a human slash-command or automated trigger to a GitHub Agentic
+  Workflow. Uses the GitHub CLI to dispatch the target workflow with a
+  structured JSON payload. Implements Integration Pattern 4 (shared-sdlc
+  dispatches agentic workflows).
+
+inputs:
+  github-token:
+    description: 'GitHub token with actions:write on the agentic workflow repository'
+    required: true
+  workflow-repo:
+    description: 'owner/repo that contains the agentic workflow file (e.g. lhuasheng/shared-agentic)'
+    required: true
+  workflow-ref:
+    description: 'Branch, tag, or SHA in workflow-repo to dispatch against'
+    required: false
+    default: 'main'
+  workflow-file:
+    description: 'Filename of the agentic workflow to dispatch (e.g. pr-review.md)'
+    required: true
+  payload:
+    description: 'JSON string of inputs to forward to the agentic workflow'
+    required: false
+    default: '{}'
+
+outputs:
+  dispatch-status:
+    description: 'HTTP status code returned by the workflow dispatch call'
+    value: ${{ steps.dispatch.outputs.status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate payload is valid JSON
+      shell: bash
+      run: |
+        echo '${{ inputs.payload }}' | jq empty || {
+          echo "::error::payload input is not valid JSON"
+          exit 1
+        }
+
+    - name: Dispatch agentic workflow
+      id: dispatch
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        HTTP_STATUS=$(gh api \
+          --method POST \
+          -H "Accept: application/vnd.github+json" \
+          "repos/${{ inputs.workflow-repo }}/actions/workflows/${{ inputs.workflow-file }}/dispatches" \
+          -f ref="${{ inputs.workflow-ref }}" \
+          -f inputs='${{ inputs.payload }}' \
+          --silent --include 2>&1 | head -1 | awk '{print $2}' || echo "0")
+        echo "status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
+        echo "Dispatched ${{ inputs.workflow-file }} to ${{ inputs.workflow-repo }}@${{ inputs.workflow-ref }} — HTTP $HTTP_STATUS"
+
+    - name: Confirm dispatch
+      shell: bash
+      run: |
+        STATUS="${{ steps.dispatch.outputs.status }}"
+        if [ "$STATUS" != "204" ] && [ "$STATUS" != "200" ]; then
+          echo "::warning::Dispatch returned HTTP $STATUS — workflow may not have triggered"
+        else
+          echo "✅ Agentic workflow dispatched successfully"
+        fi

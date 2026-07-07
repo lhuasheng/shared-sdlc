@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lhuasheng/shared-sdlc/schemas/ai-review.schema.json",
+  "title": "AI Review",
+  "description": "Structured output of an AI PR review produced by the pr-review agentic workflow.",
+  "type": "object",
+  "required": ["prNumber", "repository", "verdict", "reviewedAt", "sections"],
+  "properties": {
+    "prNumber": {
+      "type": "integer",
+      "description": "Pull request number"
+    },
+    "repository": {
+      "type": "string",
+      "description": "owner/repo"
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the review was generated"
+    },
+    "triggeredBy": {
+      "type": "string",
+      "description": "GitHub username who triggered the review (via /ai-review comment)"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["APPROVE", "REQUEST_CHANGES", "NEEDS_DISCUSSION"],
+      "description": "Top-level review verdict"
+    },
+    "sections": {
+      "type": "object",
+      "description": "Named sections of the review",
+      "properties": {
+        "mustFix": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Issues that must be fixed before merge"
+        },
+        "shouldAddress": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Convention or quality issues that should be addressed"
+        },
+        "looksGood": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Things done well in this PR"
+        },
+        "questions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Questions for the PR author"
+        }
+      },
+      "required": ["mustFix", "shouldAddress", "looksGood", "questions"],
+      "additionalProperties": false
+    },
+    "commentId": {
+      "type": ["integer", "null"],
+      "description": "ID of the PR comment created by safe-outputs (null if not yet posted)"
+    },
+    "modelUsed": {
+      "type": "string",
+      "description": "LLM model identifier used for the review"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lhuasheng/shared-sdlc/schemas/metrics.schema.json",
+  "title": "Repository Metrics",
+  "description": "Repository health metrics produced by the collect-metrics action / script.",
+  "type": "object",
+  "required": [
+    "collectedAt",
+    "repository",
+    "lookbackDays",
+    "openIssues",
+    "mergedPrs",
+    "openPrs"
+  ],
+  "properties": {
+    "collectedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when metrics were collected"
+    },
+    "repository": {
+      "type": "string",
+      "description": "owner/repo"
+    },
+    "lookbackDays": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of days covered by time-windowed metrics"
+    },
+    "openIssues": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of open issues at collection time"
+    },
+    "mergedPrs": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of PRs merged in the lookback window"
+    },
+    "openPrs": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of open PRs at collection time"
+    },
+    "commitCount": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Number of commits in the lookback window (null if unavailable)"
+    },
+    "contributors": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Number of unique contributors in the lookback window (null if unavailable)"
+    },
+    "ciSuccessRatePct": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "CI workflow success rate as a percentage (null if no runs in window)"
+    }
+  },
+  "additionalProperties": false
+}

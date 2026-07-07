@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lhuasheng/shared-sdlc/schemas/ci-summary.schema.json",
+  "title": "CI Summary",
+  "description": "Structured summary of a CI run produced by the ci-gates composite action.",
+  "type": "object",
+  "required": ["runId", "repository", "ref", "conclusion", "startedAt", "completedAt", "checks"],
+  "properties": {
+    "runId": {
+      "type": "integer",
+      "description": "GitHub Actions workflow run ID"
+    },
+    "repository": {
+      "type": "string",
+      "description": "owner/repo of the repository"
+    },
+    "ref": {
+      "type": "string",
+      "description": "Git ref that triggered the run (branch or tag)"
+    },
+    "sha": {
+      "type": "string",
+      "description": "Full commit SHA"
+    },
+    "prNumber": {
+      "type": ["integer", "null"],
+      "description": "Pull request number (null for push events)"
+    },
+    "conclusion": {
+      "type": "string",
+      "enum": ["success", "failure", "cancelled", "skipped"],
+      "description": "Overall run conclusion"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the run started"
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the run completed"
+    },
+    "durationSeconds": {
+      "type": "number",
+      "description": "Total run duration in seconds"
+    },
+    "checks": {
+      "type": "object",
+      "description": "Pass/fail status of individual CI checks",
+      "properties": {
+        "lint": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "typecheck": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "tests": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "coverage": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "prSize": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "secretScan": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "specLink": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+        "audit": { "type": "string", "enum": ["passed", "failed", "skipped"] }
+      },
+      "additionalProperties": false
+    },
+    "coveragePct": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Line coverage percentage (null if tests were skipped)"
+    }
+  },
+  "additionalProperties": false
+}

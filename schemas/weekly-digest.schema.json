@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lhuasheng/shared-sdlc/schemas/weekly-digest.schema.json",
+  "title": "Weekly Engineering Digest",
+  "description": "Structured weekly engineering digest produced by the weekly-digest agentic workflow.",
+  "type": "object",
+  "required": ["weekId", "repository", "generatedAt", "prCount", "sections"],
+  "properties": {
+    "weekId": {
+      "type": "string",
+      "pattern": "^\\d{4}-W\\d{2}$",
+      "description": "ISO 8601 week identifier (e.g. 2026-W28)"
+    },
+    "repository": {
+      "type": "string",
+      "description": "owner/repo"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the digest was generated"
+    },
+    "prCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of merged PRs covered in this digest"
+    },
+    "issueUrl": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "URL of the GitHub Issue created by safe-outputs"
+    },
+    "sections": {
+      "type": "object",
+      "description": "Digest content sections",
+      "properties": {
+        "criticalPatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Critical code patterns that must be fixed"
+        },
+        "conventionDrift": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Convention violations or inconsistencies"
+        },
+        "goodPatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Positive patterns to reinforce"
+        },
+        "recommendedActions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Concrete recommended actions for the team"
+        }
+      },
+      "required": ["criticalPatterns", "conventionDrift", "goodPatterns", "recommendedActions"],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

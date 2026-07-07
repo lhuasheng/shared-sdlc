@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lhuasheng/shared-sdlc/schemas/security-report.schema.json",
+  "title": "Security Report",
+  "description": "Structured security scan results produced by the ci-gates composite action (secret scan + npm audit).",
+  "type": "object",
+  "required": ["runId", "repository", "scannedAt", "secretScan", "dependencyAudit"],
+  "properties": {
+    "runId": {
+      "type": "integer",
+      "description": "GitHub Actions workflow run ID"
+    },
+    "repository": {
+      "type": "string",
+      "description": "owner/repo"
+    },
+    "scannedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the scan completed"
+    },
+    "prNumber": {
+      "type": ["integer", "null"],
+      "description": "Pull request number (null for push events)"
+    },
+    "secretScan": {
+      "type": "object",
+      "required": ["passed", "findingsCount"],
+      "properties": {
+        "passed": {
+          "type": "boolean",
+          "description": "True if no verified secrets were found"
+        },
+        "findingsCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of verified secret findings"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["detector", "file"],
+            "properties": {
+              "detector": { "type": "string" },
+              "file": { "type": "string" },
+              "line": { "type": ["integer", "null"] }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "dependencyAudit": {
+      "type": "object",
+      "required": ["passed", "vulnerabilitiesCount"],
+      "properties": {
+        "passed": {
+          "type": "boolean",
+          "description": "True if no high/critical vulnerabilities were found"
+        },
+        "vulnerabilitiesCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of high or critical vulnerabilities"
+        },
+        "advisories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["packageName", "severity", "cvss"],
+            "properties": {
+              "packageName": { "type": "string" },
+              "severity": {
+                "type": "string",
+                "enum": ["low", "moderate", "high", "critical"]
+              },
+              "cvss": { "type": "number", "minimum": 0, "maximum": 10 },
+              "advisory": { "type": "string", "description": "Advisory URL or ID" }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
