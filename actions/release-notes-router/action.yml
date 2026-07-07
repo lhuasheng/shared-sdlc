@@ -34,7 +34,7 @@ runs:
 
     - name: Dispatch release-notes agentic workflow
       if: env.SKIP_DISPATCH != 'true'
-      uses: ./actions/dispatch-agentic
+      uses: ../dispatch-agentic
       with:
         github-token: ${{ inputs.github-token }}
         workflow-repo: ${{ inputs.agentic-workflow-repo }}
