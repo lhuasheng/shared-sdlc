@@ -25,11 +25,16 @@
     },
     "secretScan": {
       "type": "object",
-      "required": ["passed", "findingsCount"],
+      "required": ["status", "passed", "findingsCount"],
       "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "skipped"],
+          "description": "Normalized secret scan status"
+        },
         "passed": {
-          "type": "boolean",
-          "description": "True if no verified secrets were found"
+          "type": ["boolean", "null"],
+          "description": "True if no verified secrets were found, false if verified secrets were found, or null if the scan was skipped"
         },
         "findingsCount": {
           "type": "integer",

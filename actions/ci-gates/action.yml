@@ -249,9 +249,14 @@ runs:
         fi
 
         # Derive secret-scan result from step outcome
-        SECRET_PASSED=true
+        SECRET_STATUS="skipped"
+        SECRET_PASSED=null
         SECRET_FINDINGS=0
-        if [ "${SECRET_SCAN_RESULT:-}" = "failure" ]; then
+        if [ "${SECRET_SCAN_RESULT:-}" = "success" ]; then
+          SECRET_STATUS="passed"
+          SECRET_PASSED=true
+        elif [ "${SECRET_SCAN_RESULT:-}" = "failure" ]; then
+          SECRET_STATUS="failed"
           SECRET_PASSED=false
           # findingsCount is 0 here because trufflehog output is not parsed;
           # consumers should treat passed=false as the authoritative signal
@@ -263,6 +268,7 @@ runs:
           --arg repo "${{ github.repository }}" \
           --arg scannedAt "$SCANNED_AT" \
           --argjson prNumber "$([ '${{ github.event.pull_request.number }}' != '' ] && echo '${{ github.event.pull_request.number }}' || echo 'null')" \
+          --arg secretStatus "$SECRET_STATUS" \
           --argjson auditPassed "$AUDIT_PASSED" \
           --argjson vulnCount "$VULN_COUNT" \
           --argjson secretPassed "$SECRET_PASSED" \
@@ -272,7 +278,7 @@ runs:
             repository: $repo,
             scannedAt: $scannedAt,
             prNumber: $prNumber,
-            secretScan: { passed: $secretPassed, findingsCount: $secretFindings },
+            secretScan: { status: $secretStatus, passed: $secretPassed, findingsCount: $secretFindings },
             dependencyAudit: {
               passed: $auditPassed,
               vulnerabilitiesCount: $vulnCount
