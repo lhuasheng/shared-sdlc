@@ -1,0 +1,131 @@
+# AI-SDLC Alerting Configuration
+
+This file documents the alerting rules for the AI-SDLC framework. Alerts fire
+on budget breaches and repeated workflow failures.
+
+---
+
+## Alert definitions
+
+### ALERT-01: Cost budget breach
+
+**Trigger:** A GitHub Copilot agentic workflow run exceeds its configured
+per-run cost budget.
+
+**Severity:** Warning
+
+**Notification:** Slack channel `#ai-sdlc-alerts`, GitHub issue with label
+`P2-high` and `automated`.
+
+**Implementation:** Configure a GitHub Actions workflow that monitors Copilot
+billing API and fires when spend exceeds the threshold:
+
+```yaml
+# .github/workflows/budget-alert.yml
+name: Budget Alert Monitor
+on:
+  schedule:
+    - cron: '0 * * * *'  # Check hourly
+
+jobs:
+  check-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Copilot spend
+        env:
+          GH_TOKEN: ${{ secrets.BILLING_TOKEN }}
+          MONTHLY_BUDGET_USD: '50'
+        run: |
+          SPEND=$(gh api "orgs/${{ github.repository_owner }}/copilot/billing" \
+            --jq '.estimated_paid_seats_committers // 0')
+          # Add your billing API logic here
+          echo "Current spend: $SPEND"
+```
+
+---
+
+### ALERT-02: Repeated workflow failure
+
+**Trigger:** The same agentic workflow fails 3 consecutive times within 24
+hours.
+
+**Severity:** Error
+
+**Notification:** GitHub issue with label `bug`, `P1-critical`, `automated`.
+Also notifies the on-call engineer via the configured webhook.
+
+**Implementation:** Query the GitHub Actions API for recent workflow runs:
+
+```bash
+# Check for repeated failures of a specific workflow
+FAILURES=$(gh api "repos/{owner}/{repo}/actions/runs?workflow_id=weekly-digest.md&status=failure&per_page=10" \
+  --jq '[.workflow_runs[] | select(.created_at > (now - 86400 | todate))] | length')
+
+if [ "$FAILURES" -ge 3 ]; then
+  gh issue create --title "[Alert] Repeated workflow failures: weekly-digest" \
+    --body "The weekly-digest workflow has failed $FAILURES times in the last 24 hours." \
+    --label "bug,P1-critical,automated"
+fi
+```
+
+---
+
+### ALERT-03: Monthly budget cap approaching
+
+**Trigger:** Cumulative monthly spend for all agentic workflows in a repository
+reaches 80% of the configured monthly budget.
+
+**Severity:** Warning
+
+**Notification:** Slack channel `#ai-sdlc-alerts` with spend summary.
+
+---
+
+### ALERT-04: Missed weekly digest
+
+**Trigger:** No weekly digest issue created in the current week by Monday
+12:00 UTC.
+
+**Severity:** Warning
+
+**Notification:** Creates a GitHub issue and pings the platform team.
+
+```bash
+# Check if weekly digest issue was created this week
+WEEK=$(date +%Y-W%V)
+COUNT=$(gh issue list --repo "owner/repo" \
+  --label "automated,code-review" \
+  --search "[Weekly Digest] $WEEK" \
+  --state all \
+  --json number \
+  --jq 'length')
+
+if [ "$COUNT" -eq 0 ]; then
+  echo "::warning::No weekly digest issue found for $WEEK"
+  # Trigger notification
+fi
+```
+
+---
+
+## Notification channels
+
+Configure notification destinations in your organization's GitHub Actions
+secrets:
+
+| Secret | Used by | Description |
+|---|---|---|
+| `SLACK_WEBHOOK_URL` | Budget and failure alerts | Slack incoming webhook URL |
+| `ALERT_EMAIL` | Critical alerts | Email address for critical notifications |
+| `PAGERDUTY_TOKEN` | P1 alerts | PagerDuty API token for on-call escalation |
+
+---
+
+## Alert severity matrix
+
+| Alert | Severity | Auto-resolve | SLA |
+|---|---|---|---|
+| Cost budget breach (per-run) | Warning | Yes (next run) | 24 hours |
+| Repeated workflow failure | Error | Yes (next success) | 4 hours |
+| Monthly budget cap at 80% | Warning | Yes (next month) | 48 hours |
+| Missed weekly digest | Warning | Yes (next Monday) | 12 hours |
