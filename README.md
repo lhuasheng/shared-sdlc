@@ -144,6 +144,7 @@ Change gate logic here once and every project picks it up on the next run.
 | Secret | Used by |
 |---|---|
 | `GITHUB_TOKEN` (auto-provided) | All actions |
+| `AGENTIC_DISPATCH_TOKEN` | Any caller dispatching an agentic workflow (`ai-pr-review` agentic path, `issue-triage`, `weekly-digest`, `release-notes-router`) — a fine-grained PAT with `actions:write` on the agentic-workflow repo; `GITHUB_TOKEN` can't reach across repos |
 | `ANTHROPIC_API_KEY` | **Legacy only** — `ai-pr-review` fallback, `weekly-review` |
 
 > **Note:** `ANTHROPIC_API_KEY` is not required when `agentic-workflow-repo` is

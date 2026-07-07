@@ -46,13 +46,34 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.github-token }}
       run: |
-        HTTP_STATUS=$(gh api \
+        # Build the request body with jq rather than `-f inputs=<string>`: the
+        # dispatches API needs "inputs" as a nested JSON object, and -f always
+        # sends its value as a plain string field.
+        BODY=$(jq -n \
+          --arg ref "${{ inputs.workflow-ref }}" \
+          --argjson inputs '${{ inputs.payload }}' \
+          '{ref: $ref, inputs: $inputs}')
+
+        # Determine success from gh's own exit code rather than scraping
+        # response text with head/awk, which breaks on stray stderr output
+        # or embedded \r and corrupts the $GITHUB_OUTPUT file command.
+        set +e
+        RESPONSE=$(echo "$BODY" | gh api \
           --method POST \
           -H "Accept: application/vnd.github+json" \
           "repos/${{ inputs.workflow-repo }}/actions/workflows/${{ inputs.workflow-file }}/dispatches" \
-          -f ref="${{ inputs.workflow-ref }}" \
-          -f inputs='${{ inputs.payload }}' \
-          --silent --include 2>&1 | head -1 | awk '{print $2}' || echo "0")
+          --input - 2>&1)
+        EXIT_CODE=$?
+        set -e
+
+        if [ "$EXIT_CODE" -eq 0 ]; then
+          HTTP_STATUS="204"
+        else
+          HTTP_STATUS=$(echo "$RESPONSE" | grep -oE 'HTTP [0-9]{3}' | grep -oE '[0-9]{3}' | head -1)
+          HTTP_STATUS="${HTTP_STATUS:-unknown}"
+          echo "::error::gh api dispatch call failed: $RESPONSE"
+        fi
+
         echo "status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
         echo "Dispatched ${{ inputs.workflow-file }} to ${{ inputs.workflow-repo }}@${{ inputs.workflow-ref }} — HTTP $HTTP_STATUS"
 

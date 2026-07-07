@@ -7,7 +7,14 @@ description: >
 
 inputs:
   github-token:
-    description: 'GitHub token with pull-requests:write and actions:write'
+    description: >
+      Token used to dispatch the agentic workflow. Must have actions:write on
+      agentic-workflow-repo -- the default secrets.GITHUB_TOKEN cannot do this,
+      since it is scoped only to the calling repository. Use a fine-grained PAT
+      (or GitHub App token) with actions:write on agentic-workflow-repo instead.
+      Only used for local pull-requests:write operations in the legacy fallback
+      path (when agentic-workflow-repo is empty), where secrets.GITHUB_TOKEN is
+      sufficient.
     required: true
   agentic-workflow-repo:
     description: 'owner/repo containing the compiled pr-review.lock.yml agentic workflow (e.g. lhuasheng/shared-agentic). Leave empty to use the legacy script fallback.'
