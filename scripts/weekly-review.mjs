@@ -1,3 +1,8 @@
+// DEPRECATED — scheduled for removal Q4 2026.
+// Replaced by: workflows/weekly-digest.md (GitHub Agentic Workflow).
+// Migration: use actions/weekly-review with the new agentic workflow dispatch.
+// See DEPRECATIONS.md for full guidance.
+//
 // Reads pr_diffs.json (array of {pr, title, author, diff}).
 // Writes review_output.md.
 // Requires env: ANTHROPIC_API_KEY.
