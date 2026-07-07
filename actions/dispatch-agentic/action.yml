@@ -51,7 +51,7 @@ runs:
       run: |
         PAYLOAD_FILE=$(mktemp)
         trap 'rm -f "$PAYLOAD_FILE"' EXIT
-        echo "$PAYLOAD" > "$PAYLOAD_FILE"
+        printf '%s' "$PAYLOAD" > "$PAYLOAD_FILE"
         HTTP_STATUS=$(jq -n \
           --arg ref "${{ inputs.workflow-ref }}" \
           --slurpfile inputs "$PAYLOAD_FILE" \
