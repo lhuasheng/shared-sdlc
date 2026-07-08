@@ -14,7 +14,7 @@ should migrate to the listed replacement before the target removal date.
 | **Status** | Deprecated |
 | **Deprecated since** | 2026-07-07 |
 | **Target removal** | Q4 2026 (v2.0.0) |
-| **Replacement** | `pr-review.md` in [`shared-agentic`](https://github.com/lhuasheng/shared-agentic) (GitHub Agentic Workflow, vendored into each project) |
+| **Replacement** | `.github/workflows/pr-review.md` in this repo (GitHub Agentic Workflow, vendored into each project) |
 
 **Why deprecated:** The script makes direct Anthropic API calls which require
 storing `ANTHROPIC_API_KEY` as a secret. The agentic workflow replacement uses
@@ -48,7 +48,7 @@ providing safe-outputs gating.
    because `GITHUB_TOKEN` cannot dispatch across repos.
 2. Ensure `pr-review.md` and its compiled `pr-review.lock.yml` are vendored
    into your repo's `.github/workflows/` (`new-project.sh` does this; for an
-   existing repo, copy both files from `shared-agentic`).
+   existing repo, copy both files from this repo’s `.github/workflows/`).
 3. Remove the `ANTHROPIC_API_KEY` secret from your project repository once
    migrated.
 
@@ -61,7 +61,7 @@ providing safe-outputs gating.
 | **Status** | Deprecated |
 | **Deprecated since** | 2026-07-07 |
 | **Target removal** | Q4 2026 (v2.0.0) |
-| **Replacement** | `weekly-digest.md` in [`shared-agentic`](https://github.com/lhuasheng/shared-agentic) (GitHub Agentic Workflow, vendored into each project) |
+| **Replacement** | `.github/workflows/weekly-digest.md` in this repo (GitHub Agentic Workflow, vendored into each project) |
 
 **Why deprecated:** Same reason as `pr-review.mjs` — direct Anthropic API
 usage replaced by GitHub Copilot agentic runtime.
@@ -70,7 +70,7 @@ usage replaced by GitHub Copilot agentic runtime.
 
 1. Delete the `actions/weekly-review` caller workflow — no caller is needed.
 2. Vendor `weekly-digest.md` and its compiled `weekly-digest.lock.yml` from
-   `shared-agentic` into `.github/workflows/` (`new-project.sh` does this for
+   this repo into `.github/workflows/` (`new-project.sh` does this for
    new repos). The lock file carries its own Monday 09:00 UTC cron trigger.
 3. Remove the `ANTHROPIC_API_KEY` secret once migrated.
 

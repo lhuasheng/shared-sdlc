@@ -20,7 +20,7 @@ project repositories in your organization. It displays:
 ## Data source
 
 Adoption data is collected by querying the GitHub API for repositories that
-reference shared-sdlc or shared-agentic actions in their workflow files.
+reference shared-sdlc actions or agentic workflows in their workflow files.
 
 ### Collection query
 

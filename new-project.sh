@@ -16,8 +16,8 @@ OWNER=${OWNER:-lhuasheng}
 TEMPLATE_REPO=${TEMPLATE_REPO:-lhuasheng/project-template}
 SHARED_SDLC_REPO=${SHARED_SDLC_REPO:-lhuasheng/shared-sdlc}
 SHARED_SDLC_REF=${SHARED_SDLC_REF:-main}
-AGENTIC_REPO=${AGENTIC_REPO:-lhuasheng/shared-agentic}
-AGENTIC_REF=${AGENTIC_REF:-main}
+AGENTIC_REPO=${AGENTIC_REPO:-$SHARED_SDLC_REPO}   # agentic sources now live in shared-sdlc
+AGENTIC_REF=${AGENTIC_REF:-$SHARED_SDLC_REF}
 REPO="${OWNER}/${NAME}"
 
 fetch_repo_file() {

@@ -21,22 +21,23 @@ the full workflow catalogue, adoption steps, and troubleshooting.
 
 ## 1. Architecture Overview
 
-The AI-SDLC framework has three components:
+The AI-SDLC framework has three components, all hosted in this repository
+(plus `project-template`, the seed repo new projects are created from):
 
-### shared-sdlc (this repository)
-Contains composite GitHub Actions and helper scripts that implement
-**deterministic** gates. These are authoritative for merge and deployment
-decisions. No agent has direct write access — all writes go through
-structured outputs.
+### Deterministic layer (`actions/`, `scripts/`, `templates/`)
+Composite GitHub Actions and helper scripts that implement **deterministic**
+gates. These are authoritative for merge and deployment decisions. No agent
+has direct write access — all writes go through structured outputs.
 
-### shared-agentic (separate repository)
+### Agentic layer (`.github/workflows/`)
 Canonical source of the Markdown-based agentic workflows (`.md` sources plus
 compiled `.lock.yml` files) that perform reasoning-heavy tasks like issue
 triage, weekly digest, documentation sync, and PR review. These workflows are
-informational and advisory — they do not block merge. Project repos do not
-dispatch into shared-agentic at runtime: `new-project.sh` vendors both files
-into each project, so the workflows run locally with the repo-scoped
-`GITHUB_TOKEN`.
+informational and advisory — they do not block merge. `new-project.sh`
+vendors both files into each project, so the workflows run locally with the
+repo-scoped `GITHUB_TOKEN` — and because they live in this repo's own
+`.github/workflows/`, they also run here (dogfooding): a broken workflow
+surfaces in shared-sdlc before any project vendors it.
 
 ### Shared context layer
 The contract between the two systems: label taxonomy, PR comment marker
@@ -86,9 +87,8 @@ dispatching the compiled `.lock.yml` in the same repository.
 
 ## 3. Workflow Catalogue
 
-All workflow sources live in
-[`lhuasheng/shared-agentic`](https://github.com/lhuasheng/shared-agentic)
-under `.github/workflows/`, each with its compiled `.lock.yml` alongside.
+All workflow sources live in this repository under `.github/workflows/`,
+each with its compiled `.lock.yml` alongside.
 
 ### Wave 1 (Foundation)
 
@@ -127,9 +127,8 @@ Ensure GitHub Copilot is enabled for your organization under
 ### Step 2: Create the project repository
 Run `new-project.sh` (see the README quick start). It creates the repo from
 `project-template`, copies the thin caller workflows from `templates/`, and
-vendors the agentic `.md` + precompiled `.lock.yml` files from
-`shared-agentic` — no `gh aw compile` needed unless you later edit a vendored
-`.md`. See `docs/environment-check.md` for prerequisites.
+vendors the agentic `.md` + precompiled `.lock.yml` files from this repo — no
+`gh aw compile` needed unless you later edit a vendored `.md`. See `docs/environment-check.md` for prerequisites.
 
 ### Step 3: Onboard an existing project repository
 Run the onboarding script against your project repository:
@@ -137,7 +136,6 @@ Run the onboarding script against your project repository:
 ```bash
 GH_TOKEN=<admin-token> \
 TARGET_REPO=your-org/project-repo \
-AGENTIC_REPO=your-org/shared-agentic \
 node scripts/onboard-repo.mjs
 ```
 

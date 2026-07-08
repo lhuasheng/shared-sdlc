@@ -1,0 +1,27 @@
+# .github/workflows/release.yml
+# Thin caller workflow — Release Notes Generation (Pattern 4)
+# Copy this file into your project repository's .github/workflows/ directory.
+# Requires: GITHUB_TOKEN (auto-provided). The compiled agentic .lock.yml files
+# must be vendored into this repo (new-project.sh does this).
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  actions: write
+  pull-requests: write
+
+jobs:
+  release-notes:
+    name: Generate Release Notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lhuasheng/shared-sdlc/actions/release-notes-router@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          agentic-workflow-repo: ${{ github.repository }}
+          agentic-workflow-ref: main

@@ -42,7 +42,7 @@ Checks performed:
   uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@v1
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
-    workflow-repo: lhuasheng/shared-agentic
+    workflow-repo: ${{ github.repository }}
     workflow-file: compliance-report.lock.yml
     payload: '{ "audit_artifact": "audit-data" }'
 ```
