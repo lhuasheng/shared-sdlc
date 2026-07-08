@@ -9,7 +9,7 @@ inputs:
     description: 'GitHub token with actions:write on the agentic workflow repository'
     required: true
   agentic-workflow-repo:
-    description: 'owner/repo containing the release-notes.md agentic workflow'
+    description: 'owner/repo containing the compiled release-notes.lock.yml agentic workflow'
     required: true
   agentic-workflow-ref:
     description: 'Branch/tag/SHA in agentic-workflow-repo to dispatch against'
@@ -39,7 +39,7 @@ runs:
         github-token: ${{ inputs.github-token }}
         workflow-repo: ${{ inputs.agentic-workflow-repo }}
         workflow-ref: ${{ inputs.agentic-workflow-ref }}
-        workflow-file: release-notes.md
+        workflow-file: release-notes.lock.yml
         payload: |
           {
             "tag": "${{ github.ref_name }}",

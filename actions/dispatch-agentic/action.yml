@@ -10,14 +10,17 @@ inputs:
     description: 'GitHub token with actions:write on the agentic workflow repository'
     required: true
   workflow-repo:
-    description: 'owner/repo that contains the agentic workflow file (e.g. lhuasheng/shared-agentic)'
+    description: 'owner/repo that contains the compiled agentic workflow (usually the calling repo itself: ${{ github.repository }})'
     required: true
   workflow-ref:
     description: 'Branch, tag, or SHA in workflow-repo to dispatch against'
     required: false
     default: 'main'
   workflow-file:
-    description: 'Filename of the agentic workflow to dispatch (e.g. pr-review.md)'
+    description: >
+      Filename of the compiled agentic workflow to dispatch (e.g.
+      pr-review.lock.yml). Must be the .lock.yml — GitHub Actions only
+      registers .yml/.yaml files, so the .md source can never be dispatched.
     required: true
   payload:
     description: 'JSON string of inputs to forward to the agentic workflow'
@@ -32,9 +35,16 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Validate payload is valid JSON
+    - name: Validate inputs
       shell: bash
       run: |
+        case "${{ inputs.workflow-file }}" in
+          *.yml|*.yaml) ;;
+          *)
+            echo "::error::workflow-file must be a compiled .lock.yml (got '${{ inputs.workflow-file }}') — GitHub Actions cannot dispatch a .md file"
+            exit 1
+            ;;
+        esac
         echo '${{ inputs.payload }}' | jq empty || {
           echo "::error::payload input is not valid JSON"
           exit 1

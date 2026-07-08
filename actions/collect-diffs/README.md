@@ -57,7 +57,7 @@ consume structured diff data as a pre-step (Integration Patterns 2 and 3).
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     workflow-repo: lhuasheng/shared-agentic
-    workflow-file: weekly-digest.md
+    workflow-file: weekly-digest.lock.yml
     payload: |
       { "diffs_artifact": "diffs", "pr_count": "${{ steps.diffs.outputs.pr-count }}" }
 ```
