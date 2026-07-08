@@ -97,7 +97,12 @@ runs:
       shell: bash
       run: |
         git fetch origin "${{ github.base_ref }}" --depth=1
-        LINES=$(git diff --stat "origin/${{ github.base_ref }}...HEAD" \
+        # Two-dot tree diff against the fetched base tip: on pull_request
+        # events HEAD is the PR merge commit (base + head), so this is
+        # exactly the PR's effective diff. A three-dot diff would need a
+        # merge base, which doesn't exist in the shallow (fetch-depth: 1)
+        # checkout and fails with "fatal: no merge base".
+        LINES=$(git diff --stat FETCH_HEAD HEAD \
           -- ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' ':!poetry.lock' \
              ':!*.snap' ':!dist/*' ':!build/*' ':!*.generated.*' \
           | tail -1 | awk '{print $4+$6}')
