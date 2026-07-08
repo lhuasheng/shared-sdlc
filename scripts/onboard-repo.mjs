@@ -6,6 +6,7 @@
 //
 // Requires env: GH_TOKEN, TARGET_REPO (owner/repo).
 // Optional env: AGENTIC_REPO (default: lhuasheng/shared-agentic),
+//               AGENTIC_REF (default: main),
 //               SHARED_SDLC_REPO (default: lhuasheng/shared-sdlc),
 //               SHARED_SDLC_REF (default: main).
 
@@ -21,6 +22,7 @@ if (!targetRepo) {
 }
 
 const agenticRepo = process.env.AGENTIC_REPO || 'lhuasheng/shared-agentic';
+const agenticRef = process.env.AGENTIC_REF || 'main';
 const sharedSdlcRepo = process.env.SHARED_SDLC_REPO || 'lhuasheng/shared-sdlc';
 const sharedSdlcRef = process.env.SHARED_SDLC_REF || 'main';
 const branch = `onboarding/ai-sdlc-${Date.now()}`;
@@ -35,6 +37,19 @@ function ghRaw(args) {
   execSync(`gh ${args}`, { env: process.env, stdio: 'inherit' });
 }
 
+function fetchRepoFile(repo, path, ref) {
+  const encoded = gh(`api "repos/${repo}/contents/${path}?ref=${ref}" --jq '.content'`);
+  return Buffer.from(encoded, 'base64').toString('utf8');
+}
+
+function localizeCallerWorkflow(content) {
+  return content
+    .replace(/lhuasheng\/shared-sdlc/g, sharedSdlcRepo)
+    .replace(/secrets\.AGENTIC_DISPATCH_TOKEN/g, 'secrets.GITHUB_TOKEN')
+    .replace(/agentic-workflow-repo:\s*lhuasheng\/shared-agentic/g, 'agentic-workflow-repo: ${{ github.repository }}')
+    .replace(/workflow-repo:\s*lhuasheng\/shared-agentic/g, 'workflow-repo: ${{ github.repository }}');
+}
+
 console.log(`\n🚀 Onboarding ${targetRepo} to the AI-SDLC framework\n`);
 
 // ── Step 1: Apply labels ───────────────────────────────────────────────────
@@ -42,10 +57,7 @@ console.log('📌 Step 1: Applying label taxonomy…');
 process.env.GITHUB_REPOSITORY = targetRepo;
 
 // Fetch and run apply-labels.mjs
-const labelsScript = gh(
-  `api "repos/${sharedSdlcRepo}/contents/scripts/apply-labels.mjs?ref=${sharedSdlcRef}" --jq '.content'`,
-);
-const labelsScriptContent = Buffer.from(labelsScript, 'base64').toString('utf8');
+const labelsScriptContent = fetchRepoFile(sharedSdlcRepo, 'scripts/apply-labels.mjs', sharedSdlcRef);
 const tmpLabels = join(tmpdir(), 'apply-labels.mjs');
 writeFileSync(tmpLabels, labelsScriptContent);
 execSync(`node ${tmpLabels}`, { env: process.env, stdio: 'inherit' });
@@ -73,14 +85,8 @@ const templates = [
 
 for (const { file, description } of templates) {
   try {
-    const content = gh(
-      `api "repos/${sharedSdlcRepo}/contents/templates/${file}?ref=${sharedSdlcRef}" --jq '.content'`,
-    );
-    const decoded = Buffer.from(content, 'base64').toString('utf8');
-    // Replace placeholder repo references
-    const customized = decoded
-      .replace(/lhuasheng\/shared-agentic/g, agenticRepo)
-      .replace(/lhuasheng\/shared-sdlc/g, sharedSdlcRepo);
+    const decoded = fetchRepoFile(sharedSdlcRepo, `templates/${file}`, sharedSdlcRef);
+    const customized = localizeCallerWorkflow(decoded);
     writeFileSync(join(workflowsDir, file), customized);
     console.log(`  ✅ ${description} (${file})`);
   } catch (err) {
@@ -88,8 +94,27 @@ for (const { file, description } of templates) {
   }
 }
 
-// ── Step 4: Commit and push ────────────────────────────────────────────────
-console.log('\n📌 Step 4: Committing and pushing…');
+// ── Step 4: Vendor compiled agentic workflows locally ─────────────────────
+console.log('\n📌 Step 4: Vendoring compiled agentic workflows…');
+const localAgenticWorkflows = [
+  'pr-review.lock.yml',
+  'weekly-digest.lock.yml',
+  'issue-triage.lock.yml',
+  'release-notes.lock.yml',
+];
+
+for (const file of localAgenticWorkflows) {
+  try {
+    const lockContent = fetchRepoFile(agenticRepo, `.github/workflows/${file}`, agenticRef);
+    writeFileSync(join(workflowsDir, file), lockContent);
+    console.log(`  ✅ ${file}`);
+  } catch (err) {
+    console.warn(`  ⚠️  Could not vendor ${file}: ${err.message}`);
+  }
+}
+
+// ── Step 5: Commit and push ────────────────────────────────────────────────
+console.log('\n📌 Step 5: Committing and pushing…');
 execSync(`git -C "${tmpDir}" add .github/workflows/`, { stdio: 'inherit' });
 execSync(
   `git -C "${tmpDir}" commit -m "feat: onboard to AI-SDLC framework" --author "AI-SDLC Bot <ai-sdlc@users.noreply.github.com>"`,
@@ -97,8 +122,8 @@ execSync(
 );
 execSync(`git -C "${tmpDir}" push origin "${branch}"`, { env: process.env, stdio: 'inherit' });
 
-// ── Step 5: Open onboarding PR ─────────────────────────────────────────────
-console.log('\n📌 Step 5: Opening onboarding PR…');
+// ── Step 6: Open onboarding PR ─────────────────────────────────────────────
+console.log('\n📌 Step 6: Opening onboarding PR…');
 const prBody = `## AI-SDLC Framework Onboarding
 
 This PR adds the AI-SDLC framework thin caller workflows to this repository.
@@ -112,6 +137,16 @@ This PR adds the AI-SDLC framework thin caller workflows to this repository.
 | Weekly Digest | \`.github/workflows/weekly-digest.yml\` | Monday 09:00 UTC engineering digest |
 | Issue Triage | \`.github/workflows/issue-triage.yml\` | Auto-classify new issues |
 | Release Notes | \`.github/workflows/release.yml\` | Draft release notes on semver tag |
+
+### Compiled agentic workflows vendored locally
+
+- \`.github/workflows/pr-review.lock.yml\`
+- \`.github/workflows/weekly-digest.lock.yml\`
+- \`.github/workflows/issue-triage.lock.yml\`
+- \`.github/workflows/release-notes.lock.yml\`
+
+These are sourced from \`${agenticRepo}\` and run in this repository context.
+No cross-repo dispatch token is required for these flows.
 
 ### Next steps
 
