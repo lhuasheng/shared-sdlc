@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Usage: ./new-project.sh project-X
 #
-# Bootstraps a new project repository and vendors the required agentic lock
-# workflows locally so dispatching and safe outputs run in the analyzed repo.
+# Bootstraps a new project repository and vendors required agentic workflow
+# sources and lock files locally so dispatching and safe outputs run in the
+# analyzed repo.
 set -euo pipefail
 
 NAME=${1:-}
@@ -59,16 +60,17 @@ for wf in "${CALLER_WORKFLOWS[@]}"; do
   sed -i 's|workflow-repo: lhuasheng/shared-agentic|workflow-repo: ${{ github.repository }}|g' ".github/workflows/${wf}"
 done
 
-echo "Vendoring compiled agentic workflows from ${AGENTIC_REPO}@${AGENTIC_REF}..."
-LOCAL_AGENTIC_WORKFLOWS=(
-  "pr-review.lock.yml"
-  "weekly-digest.lock.yml"
-  "issue-triage.lock.yml"
-  "release-notes.lock.yml"
+echo "Vendoring compiled agentic workflows and sources from ${AGENTIC_REPO}@${AGENTIC_REF}..."
+LOCAL_AGENTIC_WORKFLOW_IDS=(
+  "pr-review"
+  "weekly-digest"
+  "issue-triage"
+  "release-notes"
 )
 
-for wf in "${LOCAL_AGENTIC_WORKFLOWS[@]}"; do
-  fetch_repo_file "$AGENTIC_REPO" ".github/workflows/${wf}" "$AGENTIC_REF" ".github/workflows/${wf}"
+for wf in "${LOCAL_AGENTIC_WORKFLOW_IDS[@]}"; do
+  fetch_repo_file "$AGENTIC_REPO" ".github/workflows/${wf}.md" "$AGENTIC_REF" ".github/workflows/${wf}.md"
+  fetch_repo_file "$AGENTIC_REPO" ".github/workflows/${wf}.lock.yml" "$AGENTIC_REF" ".github/workflows/${wf}.lock.yml"
 done
 
 if ! git diff --quiet -- .github/workflows; then
@@ -88,4 +90,4 @@ gh api "repos/${REPO}/branches/main/protection" \
   --field required_pull_request_reviews='{"required_approving_review_count":1}' \
   --field restrictions=null
 
-echo "Done. ${REPO} now runs shared-sdlc actions with local compiled agentic workflows."
+echo "Done. ${REPO} now runs shared-sdlc actions with local compiled agentic workflow sources and lock files."

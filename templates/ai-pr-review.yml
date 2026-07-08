@@ -3,7 +3,7 @@
 # Copy this file into your project repository's .github/workflows/ directory.
 # Requires: GITHUB_TOKEN (auto-provided)
 
-name: AI PR Review
+name: AI PR Review Caller
 
 on:
   issue_comment:
@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   ai-review:
-    name: AI PR Review
+    name: Dispatch AI PR Review
     if: |
       github.event.issue.pull_request &&
       startsWith(github.event.comment.body, '/ai-review')

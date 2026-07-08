@@ -94,22 +94,26 @@ for (const { file, description } of templates) {
   }
 }
 
-// ── Step 4: Vendor compiled agentic workflows locally ─────────────────────
-console.log('\n📌 Step 4: Vendoring compiled agentic workflows…');
-const localAgenticWorkflows = [
-  'pr-review.lock.yml',
-  'weekly-digest.lock.yml',
-  'issue-triage.lock.yml',
-  'release-notes.lock.yml',
+// ── Step 4: Vendor agentic workflow sources and lock files locally ────────
+console.log('\n📌 Step 4: Vendoring agentic workflow sources and lock files…');
+const localAgenticWorkflowIds = [
+  'pr-review',
+  'weekly-digest',
+  'issue-triage',
+  'release-notes',
 ];
 
-for (const file of localAgenticWorkflows) {
+for (const id of localAgenticWorkflowIds) {
   try {
-    const lockContent = fetchRepoFile(agenticRepo, `.github/workflows/${file}`, agenticRef);
-    writeFileSync(join(workflowsDir, file), lockContent);
-    console.log(`  ✅ ${file}`);
+    const sourceContent = fetchRepoFile(agenticRepo, `.github/workflows/${id}.md`, agenticRef);
+    writeFileSync(join(workflowsDir, `${id}.md`), sourceContent);
+
+    const lockContent = fetchRepoFile(agenticRepo, `.github/workflows/${id}.lock.yml`, agenticRef);
+    writeFileSync(join(workflowsDir, `${id}.lock.yml`), lockContent);
+
+    console.log(`  ✅ ${id}.md + ${id}.lock.yml`);
   } catch (err) {
-    console.warn(`  ⚠️  Could not vendor ${file}: ${err.message}`);
+    console.warn(`  ⚠️  Could not vendor ${id}: ${err.message}`);
   }
 }
 
@@ -138,7 +142,12 @@ This PR adds the AI-SDLC framework thin caller workflows to this repository.
 | Issue Triage | \`.github/workflows/issue-triage.yml\` | Auto-classify new issues |
 | Release Notes | \`.github/workflows/release.yml\` | Draft release notes on semver tag |
 
-### Compiled agentic workflows vendored locally
+### Agentic workflow sources and lock files vendored locally
+
+- \`.github/workflows/pr-review.md\`
+- \`.github/workflows/weekly-digest.md\`
+- \`.github/workflows/issue-triage.md\`
+- \`.github/workflows/release-notes.md\`
 
 - \`.github/workflows/pr-review.lock.yml\`
 - \`.github/workflows/weekly-digest.lock.yml\`
