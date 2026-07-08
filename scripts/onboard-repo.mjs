@@ -75,11 +75,11 @@ console.log('📌 Step 3: Copying workflow templates…');
 const workflowsDir = join(tmpDir, '.github', 'workflows');
 mkdirSync(workflowsDir, { recursive: true });
 
+// issue-triage and weekly-digest need no callers: their vendored .lock.yml
+// files trigger directly on issues:opened and cron respectively.
 const templates = [
   { file: 'ci.yml', description: 'CI Gates' },
   { file: 'ai-pr-review.yml', description: 'AI PR Review' },
-  { file: 'weekly-digest.yml', description: 'Weekly Digest' },
-  { file: 'issue-triage.yml', description: 'Issue Triage' },
   { file: 'release.yml', description: 'Release Notes' },
 ];
 
@@ -117,9 +117,27 @@ for (const id of localAgenticWorkflowIds) {
   }
 }
 
+// gh-aw support files: maintenance workflow (cleans expiring safe-outputs),
+// pinned actions manifest (for reproducible recompiles), and the
+// .gitattributes marking lock files as generated.
+const supportFiles = [
+  { src: '.github/workflows/agentics-maintenance.yml', dest: join(workflowsDir, 'agentics-maintenance.yml') },
+  { src: '.github/aw/actions-lock.json', dest: join(tmpDir, '.github', 'aw', 'actions-lock.json') },
+  { src: '.gitattributes', dest: join(tmpDir, '.gitattributes') },
+];
+mkdirSync(join(tmpDir, '.github', 'aw'), { recursive: true });
+for (const { src, dest } of supportFiles) {
+  try {
+    writeFileSync(dest, fetchRepoFile(agenticRepo, src, agenticRef));
+    console.log(`  ✅ ${src}`);
+  } catch (err) {
+    console.warn(`  ⚠️  Could not vendor ${src}: ${err.message}`);
+  }
+}
+
 // ── Step 5: Commit and push ────────────────────────────────────────────────
 console.log('\n📌 Step 5: Committing and pushing…');
-execSync(`git -C "${tmpDir}" add .github/workflows/`, { stdio: 'inherit' });
+execSync(`git -C "${tmpDir}" add .github/ .gitattributes`, { stdio: 'inherit' });
 execSync(
   `git -C "${tmpDir}" commit -m "feat: onboard to AI-SDLC framework" --author "AI-SDLC Bot <ai-sdlc@users.noreply.github.com>"`,
   { stdio: 'inherit' },
@@ -138,9 +156,11 @@ This PR adds the AI-SDLC framework thin caller workflows to this repository.
 |---|---|---|
 | CI Gates | \`.github/workflows/ci.yml\` | Lint, test, PR size, security, spec link |
 | AI PR Review | \`.github/workflows/ai-pr-review.yml\` | /ai-review command → agentic review |
-| Weekly Digest | \`.github/workflows/weekly-digest.yml\` | Monday 09:00 UTC engineering digest |
-| Issue Triage | \`.github/workflows/issue-triage.yml\` | Auto-classify new issues |
 | Release Notes | \`.github/workflows/release.yml\` | Draft release notes on semver tag |
+
+Issue triage and the weekly digest have no caller workflows — their vendored
+\`.lock.yml\` files below trigger directly on \`issues: opened\` and the
+Monday 09:00 UTC cron.
 
 ### Agentic workflow sources and lock files vendored locally
 

@@ -14,7 +14,7 @@ should migrate to the listed replacement before the target removal date.
 | **Status** | Deprecated |
 | **Deprecated since** | 2026-07-07 |
 | **Target removal** | Q4 2026 (v2.0.0) |
-| **Replacement** | `workflows/pr-review.md` (GitHub Agentic Workflow) |
+| **Replacement** | `pr-review.md` in [`shared-agentic`](https://github.com/lhuasheng/shared-agentic) (GitHub Agentic Workflow, vendored into each project) |
 
 **Why deprecated:** The script makes direct Anthropic API calls which require
 storing `ANTHROPIC_API_KEY` as a secret. The agentic workflow replacement uses
@@ -36,17 +36,19 @@ providing safe-outputs gating.
    # After (current)
    - uses: lhuasheng/shared-sdlc/actions/ai-pr-review@v1
      with:
-       github-token: ${{ secrets.AGENTIC_DISPATCH_TOKEN }}
-       agentic-workflow-repo: lhuasheng/shared-agentic
-       agentic-workflow-ref: v1.0.0
+       github-token: ${{ secrets.GITHUB_TOKEN }}
+       agentic-workflow-repo: ${{ github.repository }}
+       agentic-workflow-ref: main
    ```
 
-   `github-token` here needs `actions:write` on `agentic-workflow-repo` — the
-   default `secrets.GITHUB_TOKEN` is scoped only to the calling repo and
-   cannot dispatch a workflow in a different one. Use a fine-grained PAT (or
-   GitHub App token) stored as `AGENTIC_DISPATCH_TOKEN`.
-2. Ensure the compiled `pr-review.lock.yml` file is available in
-   `shared-agentic` (run `gh aw compile` there if it isn't).
+   With the default local-vendoring setup the compiled `pr-review.lock.yml`
+   lives in your own repo, so `GITHUB_TOKEN` is sufficient. Only if you point
+   `agentic-workflow-repo` at a *different* repository do you need a
+   fine-grained PAT (or GitHub App token) with `actions:write` on it,
+   because `GITHUB_TOKEN` cannot dispatch across repos.
+2. Ensure `pr-review.md` and its compiled `pr-review.lock.yml` are vendored
+   into your repo's `.github/workflows/` (`new-project.sh` does this; for an
+   existing repo, copy both files from `shared-agentic`).
 3. Remove the `ANTHROPIC_API_KEY` secret from your project repository once
    migrated.
 
@@ -59,21 +61,17 @@ providing safe-outputs gating.
 | **Status** | Deprecated |
 | **Deprecated since** | 2026-07-07 |
 | **Target removal** | Q4 2026 (v2.0.0) |
-| **Replacement** | `workflows/weekly-digest.md` (GitHub Agentic Workflow) |
+| **Replacement** | `weekly-digest.md` in [`shared-agentic`](https://github.com/lhuasheng/shared-agentic) (GitHub Agentic Workflow, vendored into each project) |
 
 **Why deprecated:** Same reason as `pr-review.mjs` — direct Anthropic API
 usage replaced by GitHub Copilot agentic runtime.
 
 **Migration steps:**
 
-1. Replace the `actions/weekly-review` caller with the new template:
-
-   ```yaml
-   # See templates/weekly-digest.yml for the complete replacement workflow
-   ```
-
-2. Update caller workflows to use `dispatch-agentic` pointing to
-   `workflows/weekly-digest.md`.
+1. Delete the `actions/weekly-review` caller workflow — no caller is needed.
+2. Vendor `weekly-digest.md` and its compiled `weekly-digest.lock.yml` from
+   `shared-agentic` into `.github/workflows/` (`new-project.sh` does this for
+   new repos). The lock file carries its own Monday 09:00 UTC cron trigger.
 3. Remove the `ANTHROPIC_API_KEY` secret once migrated.
 
 ---

@@ -30,9 +30,13 @@ decisions. No agent has direct write access — all writes go through
 structured outputs.
 
 ### shared-agentic (separate repository)
-Contains Markdown-based agentic workflows that perform reasoning-heavy tasks
-like issue triage, weekly digest, documentation sync, and PR review. These
-workflows are informational and advisory — they do not block merge.
+Canonical source of the Markdown-based agentic workflows (`.md` sources plus
+compiled `.lock.yml` files) that perform reasoning-heavy tasks like issue
+triage, weekly digest, documentation sync, and PR review. These workflows are
+informational and advisory — they do not block merge. Project repos do not
+dispatch into shared-agentic at runtime: `new-project.sh` vendors both files
+into each project, so the workflows run locally with the repo-scoped
+`GITHUB_TOKEN`.
 
 ### Shared context layer
 The contract between the two systems: label taxonomy, PR comment marker
@@ -55,7 +59,7 @@ steps:
   - uses: lhuasheng/shared-sdlc/actions/ci-gates@v1
   - uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@v1
     with:
-      workflow-file: architecture-review.md
+      workflow-file: architecture-review.lock.yml  # always the compiled lock, never the .md
 ```
 
 ### Pattern 2: Parallel with shared context
@@ -64,47 +68,53 @@ Both systems run simultaneously and exchange data through artifacts.
 **Used for:** CI failure investigation, vulnerability triage, coverage suggestions  
 **Example:** `ci-investigator.md` reads `ci-summary.json` artifact from CI
 
-### Pattern 3: Agent orchestrates shared-sdlc tools
-The agentic workflow calls composite actions from shared-sdlc as pre-steps.
+### Pattern 3: Direct trigger
+The vendored agentic `.lock.yml` triggers directly on the project's own
+events — no caller workflow is involved.
 
-**Used for:** Weekly digest, tech debt scan, compliance report  
-**Example:** `weekly-digest.md` calls `collect-diffs` and `collect-metrics` as pre-steps
+**Used for:** Issue triage (`issues: opened`), weekly digest (cron), tech debt scan, compliance report  
+**Example:** `issue-triage.lock.yml` runs when an issue is opened and applies labels via safe-outputs
 
 ### Pattern 4: shared-sdlc dispatches agentic workflows
-A composite action routes a human command or tag push to an agentic workflow.
+A composite action routes a human command or tag push to an agentic workflow,
+dispatching the compiled `.lock.yml` in the same repository.
 
 **Used for:** PR review (/ai-review command), release notes generation  
-**Example:** `dispatch-agentic` sends `/ai-review` comment to `pr-review.md`
+**Example:** `dispatch-agentic` sends `/ai-review` comment to `pr-review.lock.yml`
 
 ---
 
 ## 3. Workflow Catalogue
 
+All workflow sources live in
+[`lhuasheng/shared-agentic`](https://github.com/lhuasheng/shared-agentic)
+under `.github/workflows/`, each with its compiled `.lock.yml` alongside.
+
 ### Wave 1 (Foundation)
 
 | Workflow | File | Pattern | Trigger | Priority |
 |---|---|---|---|---|
-| Weekly Engineering Digest | `workflows/weekly-digest.md` | 3 | Monday 09:00 UTC | Must |
-| Issue Triage | `workflows/issue-triage.md` | 3 | `issues: opened` | Must |
-| Documentation Sync | `workflows/docs-sync.md` | 3 | `push: main (src/**)` | Must |
+| Weekly Engineering Digest | `weekly-digest.md` | 3 | Monday 09:00 UTC | Must |
+| Issue Triage | `issue-triage.md` | 3 | `issues: opened` | Must |
+| Documentation Sync | `docs-sync.md` | 3 | `push: main (src/**)` | Must |
 
 ### Wave 2 (Developer Experience)
 
 | Workflow | File | Pattern | Trigger | Priority |
 |---|---|---|---|---|
-| AI PR Review | `workflows/pr-review.md` | 4 | `/ai-review` comment | Must |
-| CI Failure Investigation | `workflows/ci-investigator.md` | 2 | CI run failure | Must |
-| Release Notes Generation | `workflows/release-notes.md` | 4 | Semver tag push | Should |
+| AI PR Review | `pr-review.md` | 4 | `/ai-review` comment | Must |
+| CI Failure Investigation | `ci-investigator.md` | 2 | CI run failure | Must |
+| Release Notes Generation | `release-notes.md` | 4 | Semver tag push | Should |
 
 ### Wave 3 (Advanced Coverage)
 
 | Workflow | File | Pattern | Trigger | Priority |
 |---|---|---|---|---|
-| Architecture Review | `workflows/architecture-review.md` | 1 | CI success | Must |
-| Vulnerability Triage | `workflows/vuln-triage.md` | 2 | CI run | Should |
-| Tech Debt Scan | `workflows/tech-debt.md` | 3 | Monthly (1st) | Could |
-| Compliance Audit Report | `workflows/compliance-report.md` | 3 | Monthly (1st) | Could |
-| Coverage Improvement Suggestions | `workflows/coverage-suggester.md` | 2 | CI run | Could |
+| Architecture Review | `architecture-review.md` | 1 | CI success | Must |
+| Vulnerability Triage | `vuln-triage.md` | 2 | CI run | Should |
+| Tech Debt Scan | `tech-debt.md` | 3 | Monthly (1st) | Could |
+| Compliance Audit Report | `compliance-report.md` | 3 | Monthly (1st) | Could |
+| Coverage Improvement Suggestions | `coverage-suggester.md` | 2 | CI run | Could |
 
 ---
 
@@ -114,12 +124,14 @@ A composite action routes a human command or tag push to an agentic workflow.
 Ensure GitHub Copilot is enabled for your organization under
 **Settings → Copilot → Policies**.
 
-### Step 2: Bootstrap the shared-agentic repository
-Create the `shared-agentic` repository and copy the workflow files from
-`workflows/` in this repository. See `docs/environment-check.md` for
-prerequisites.
+### Step 2: Create the project repository
+Run `new-project.sh` (see the README quick start). It creates the repo from
+`project-template`, copies the thin caller workflows from `templates/`, and
+vendors the agentic `.md` + precompiled `.lock.yml` files from
+`shared-agentic` — no `gh aw compile` needed unless you later edit a vendored
+`.md`. See `docs/environment-check.md` for prerequisites.
 
-### Step 3: Onboard a project repository
+### Step 3: Onboard an existing project repository
 Run the onboarding script against your project repository:
 
 ```bash
@@ -155,7 +167,7 @@ Document results in a validation report.
 | Secret | Required by | Description |
 |---|---|---|
 | `GITHUB_TOKEN` | All actions | Auto-provisioned by GitHub Actions |
-| `AGENTIC_DISPATCH_TOKEN` | `dispatch-agentic` and everything that calls it | Fine-grained PAT (or GitHub App token) with `actions:write` on the agentic-workflow repo. `GITHUB_TOKEN` is scoped only to the calling repo and cannot dispatch a workflow in a different one — this is a hard platform limit, not something any permissions block can work around. |
+| `AGENTIC_DISPATCH_TOKEN` | Cross-repo dispatch only (non-default) | Not needed in the default setup — the compiled `.lock.yml` files are vendored into each project, so dispatch stays in-repo and `GITHUB_TOKEN` suffices. Only needed if `workflow-repo` points at a *different* repo: a fine-grained PAT (or GitHub App token) with `actions:write` there, since `GITHUB_TOKEN` cannot dispatch across repos. |
 | `ANTHROPIC_API_KEY` | Legacy `ai-pr-review`, `weekly-review` | Deprecated; not required for agentic path |
 
 ### Action inputs reference
@@ -176,7 +188,9 @@ See the README in each action directory:
 ### Agentic workflow not triggering
 1. Verify the Copilot coding agent is enabled in your organization.
 2. Check that the `actions:write` permission is granted in the caller workflow.
-3. Verify the `workflow-file` input matches the exact filename in `shared-agentic`.
+3. Verify the `workflow-file` input is the exact compiled filename (e.g.
+   `pr-review.lock.yml`) present in the target repo — dispatching the `.md`
+   always fails because GitHub Actions only registers `.yml` files.
 4. Check the dispatch status output: `steps.dispatch.outputs.dispatch-status` should be `204`.
 
 ### Consolidated PR comment not appearing

@@ -6,8 +6,14 @@ Development Lifecycle (AI-SDLC) Framework**.
 
 Every project repo points its thin workflow files at the actions in this repo,
 so all gate logic lives in one place. Reasoning-heavy tasks are handled by
-[GitHub Agentic Workflows](https://docs.github.com/en/copilot/using-github-copilot/using-copilot-coding-agent)
-defined in `workflows/` and dispatched from composite actions here.
+[GitHub Agentic Workflows](https://github.github.com/gh-aw/) whose canonical
+sources live in
+[`lhuasheng/shared-agentic`](https://github.com/lhuasheng/shared-agentic);
+`new-project.sh` **vendors** each workflow's `.md` source and compiled
+`.lock.yml` into the project repo, so agentic runs happen locally with the
+repo-scoped `GITHUB_TOKEN`. On-demand workflows (PR review, release notes)
+are dispatched by composite actions here, always targeting the compiled
+`*.lock.yml` filename.
 
 > **This repo must be public** (or accessible via a GitHub App) so that
 > project repos can reference `uses: org/shared-sdlc/...`.
@@ -37,19 +43,6 @@ scripts/
   pr-review.mjs             ← [DEPRECATED Q4 2026] Legacy Anthropic PR review script
   weekly-review.mjs         ← [DEPRECATED Q4 2026] Legacy Anthropic weekly review script
 
-workflows/                 ← GitHub Agentic Workflow Markdown files
-  weekly-digest.md           ← Monday 09:00 UTC engineering digest issue
-  issue-triage.md            ← Auto-classify new issues
-  docs-sync.md               ← Documentation sync PR on push to main
-  pr-review.md               ← AI pre-screen review (triggered by /ai-review)
-  ci-investigator.md         ← CI failure root cause analysis
-  release-notes.md           ← Draft release notes PR on semver tag
-  architecture-review.md     ← Architecture review after CI passes
-  vuln-triage.md             ← Vulnerability ranking from security scan
-  tech-debt.md               ← Monthly tech debt scan
-  compliance-report.md       ← Monthly compliance audit
-  coverage-suggester.md      ← Test coverage improvement suggestions
-
 schemas/                   ← JSON Schema draft 2020-12 artifact definitions
   ci-summary.schema.json
   ai-review.schema.json
@@ -59,11 +52,14 @@ schemas/                   ← JSON Schema draft 2020-12 artifact definitions
   metrics.schema.json
 
 templates/                 ← Ready-to-copy thin caller workflow files
-  ci.yml
-  ai-pr-review.yml
-  weekly-digest.yml
-  issue-triage.yml
-  release.yml
+  ci.yml                     ← CI gates on PR/push
+  ai-pr-review.yml           ← /ai-review comment → dispatches local pr-review.lock.yml
+  release.yml                ← semver tag push → dispatches local release-notes.lock.yml
+  (issue-triage and weekly-digest need no callers: their vendored .lock.yml
+   files trigger directly on issues:opened and cron)
+
+new-project.sh             ← Bootstraps a new project repo: template + callers
+                             + vendored agentic .md/.lock.yml files
 
 docs/
   playbook.md             ← Complete AI-SDLC framework reference
@@ -97,14 +93,28 @@ monitoring/
 |---|---|---|
 | **1: Sequential** | Agentic runs only after gate passes | Architecture review after CI |
 | **2: Parallel** | Both run simultaneously, share artifacts | CI investigator + CI |
-| **3: Agent orchestrates** | Agentic workflow calls shared-sdlc as pre-step | Weekly digest calls collect-diffs |
-| **4: Dispatch** | shared-sdlc routes command to agentic workflow | /ai-review → pr-review.md |
+| **3: Direct trigger** | Vendored agentic lock triggers on repo events | Issue triage on issues:opened; weekly digest on cron |
+| **4: Dispatch** | shared-sdlc routes command to agentic workflow | /ai-review → pr-review.lock.yml |
 
 See [`docs/playbook.md`](docs/playbook.md) for the full reference.
 
 ---
 
-## Quick start: Onboard a project repository
+## Quick start: Create a new project repository
+
+```bash
+# Requires an authenticated gh CLI with repo-create rights
+curl -fsSL https://raw.githubusercontent.com/lhuasheng/shared-sdlc/main/new-project.sh -o new-project.sh
+bash new-project.sh project-X
+```
+
+This creates the repo from `project-template`, copies the thin caller
+workflows from `templates/`, vendors the agentic `.md` + compiled `.lock.yml`
+files from `shared-agentic` (no `gh aw compile` needed — locks are
+precompiled; only recompile if you edit a vendored `.md`), and enables branch
+protection.
+
+To onboard an *existing* repository:
 
 ```bash
 # Requires GH_TOKEN with admin access to the target repo
@@ -117,7 +127,8 @@ Or copy a template manually:
 # Copy thin caller workflows into your project repo
 cp templates/ci.yml path/to/project/.github/workflows/ci.yml
 cp templates/ai-pr-review.yml path/to/project/.github/workflows/ai-pr-review.yml
-# Edit each file to set your stack's commands and repo references
+# Edit each file to set your stack's commands, then vendor the agentic
+# .md/.lock.yml files the same way new-project.sh does
 ```
 
 ---
@@ -143,8 +154,8 @@ Change gate logic here once and every project picks it up on the next run.
 
 | Secret | Used by |
 |---|---|
-| `GITHUB_TOKEN` (auto-provided) | All actions |
-| `AGENTIC_DISPATCH_TOKEN` | Any caller dispatching an agentic workflow (`ai-pr-review` agentic path, `issue-triage`, `weekly-digest`, `release-notes-router`) — a fine-grained PAT with `actions:write` on the agentic-workflow repo; `GITHUB_TOKEN` can't reach across repos |
+| `GITHUB_TOKEN` (auto-provided) | All actions — including agentic dispatch, since the compiled `.lock.yml` files are vendored into the project repo itself |
+| `AGENTIC_DISPATCH_TOKEN` | **Only for cross-repo dispatch** (non-default): if you point `workflow-repo` / `agentic-workflow-repo` at a *different* repo, you need a fine-grained PAT with `actions:write` on it; `GITHUB_TOKEN` can't reach across repos |
 | `ANTHROPIC_API_KEY` | **Legacy only** — `ai-pr-review` fallback, `weekly-review` |
 
 > **Note:** `ANTHROPIC_API_KEY` is not required when `agentic-workflow-repo` is

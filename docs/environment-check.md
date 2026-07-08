@@ -58,7 +58,7 @@ The following secrets must be present in every project repository that uses this
 |---|---|---|---|
 | `ANTHROPIC_API_KEY` | `actions/ai-pr-review`, `actions/weekly-review` | Yes (Wave 1 legacy) | Will be replaced by GitHub Copilot in Wave 2 agentic workflows |
 | `GITHUB_TOKEN` | All actions | Yes (auto-provisioned) | Provided automatically by GitHub Actions; no manual setup required |
-| `AGENTIC_DISPATCH_TOKEN` | `dispatch-agentic`, `ai-pr-review` (agentic path), `release-notes-router`, and every thin caller in `templates/` that dispatches an agentic workflow | Yes (Wave 2 agentic path) | A fine-grained PAT (or GitHub App token) with `actions:write` on the agentic-workflow repository. `secrets.GITHUB_TOKEN` cannot be used here — it's scoped only to the calling repo and has no permission to dispatch a workflow in a different one. Recommended as an org-level secret so every onboarded repo picks it up automatically. |
+| `AGENTIC_DISPATCH_TOKEN` | Cross-repo dispatch only (non-default) | No | Not needed in the default setup: `new-project.sh` vendors the compiled agentic `.lock.yml` files into each project repo, so dispatch stays in-repo and `GITHUB_TOKEN` suffices. Only if `workflow-repo` / `agentic-workflow-repo` points at a *different* repository do you need a fine-grained PAT (or GitHub App token) with `actions:write` on it — `GITHUB_TOKEN` cannot dispatch across repos. |
 
 ### Secrets no longer required after Wave 2
 

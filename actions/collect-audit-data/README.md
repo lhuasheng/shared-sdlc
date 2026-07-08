@@ -43,7 +43,7 @@ Checks performed:
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     workflow-repo: lhuasheng/shared-agentic
-    workflow-file: compliance-report.md
+    workflow-file: compliance-report.lock.yml
     payload: '{ "audit_artifact": "audit-data" }'
 ```
 

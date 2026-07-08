@@ -37,14 +37,19 @@ gh repo create "$REPO" \
 
 cd "$NAME"
 
+echo "Removing legacy template workflows (if present)..."
+git rm -q --ignore-unmatch \
+  .github/workflows/pr-review.yml \
+  .github/workflows/weekly-review.yml
+
 echo "Syncing shared-sdlc caller workflows into ${REPO}..."
 mkdir -p .github/workflows
 
+# issue-triage and weekly-digest need no callers: their vendored .lock.yml
+# files trigger directly on issues:opened and cron respectively.
 CALLER_WORKFLOWS=(
   "ci.yml"
   "ai-pr-review.yml"
-  "weekly-digest.yml"
-  "issue-triage.yml"
   "release.yml"
 )
 
@@ -53,11 +58,6 @@ for wf in "${CALLER_WORKFLOWS[@]}"; do
 
   # Keep shared-sdlc action references configurable.
   sed -i "s|lhuasheng/shared-sdlc|${SHARED_SDLC_REPO}|g" ".github/workflows/${wf}"
-
-  # Local dispatch: use repo-scoped token and target this repository's workflows.
-  sed -i 's|secrets.AGENTIC_DISPATCH_TOKEN|secrets.GITHUB_TOKEN|g' ".github/workflows/${wf}"
-  sed -i 's|agentic-workflow-repo: lhuasheng/shared-agentic|agentic-workflow-repo: ${{ github.repository }}|g' ".github/workflows/${wf}"
-  sed -i 's|workflow-repo: lhuasheng/shared-agentic|workflow-repo: ${{ github.repository }}|g' ".github/workflows/${wf}"
 done
 
 echo "Vendoring compiled agentic workflows and sources from ${AGENTIC_REPO}@${AGENTIC_REF}..."
@@ -73,8 +73,16 @@ for wf in "${LOCAL_AGENTIC_WORKFLOW_IDS[@]}"; do
   fetch_repo_file "$AGENTIC_REPO" ".github/workflows/${wf}.lock.yml" "$AGENTIC_REF" ".github/workflows/${wf}.lock.yml"
 done
 
-if ! git diff --quiet -- .github/workflows; then
-  git add .github/workflows
+# gh-aw support files: maintenance workflow (cleans expiring safe-outputs),
+# pinned actions manifest (needed for reproducible recompiles), and the
+# .gitattributes that marks lock files as generated.
+mkdir -p .github/aw
+fetch_repo_file "$AGENTIC_REPO" ".github/workflows/agentics-maintenance.yml" "$AGENTIC_REF" ".github/workflows/agentics-maintenance.yml"
+fetch_repo_file "$AGENTIC_REPO" ".github/aw/actions-lock.json" "$AGENTIC_REF" ".github/aw/actions-lock.json"
+fetch_repo_file "$AGENTIC_REPO" ".gitattributes" "$AGENTIC_REF" ".gitattributes"
+
+if [ -n "$(git status --porcelain -- .github .gitattributes)" ]; then
+  git add .github .gitattributes
   git commit -m "chore: bootstrap local AI-SDLC workflows"
   git push origin main
   echo "Pushed workflow bootstrap commit to ${REPO}@main"
