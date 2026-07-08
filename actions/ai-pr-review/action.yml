@@ -46,6 +46,28 @@ runs:
   using: 'composite'
   steps:
     # ── Agentic path (preferred) ───────────────────────────────────────────────
+    - name: Validate PR exists before dispatch
+      if: inputs.agentic-workflow-repo != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        PR_NUMBER="${{ github.event.issue.number }}"
+        REPO="${{ github.repository }}"
+        if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "0" ]; then
+          echo "::error::Cannot dispatch pr-review: github.event.issue.number is empty or zero"
+          exit 1
+        fi
+        set +e
+        gh api "repos/$REPO/pulls/$PR_NUMBER" > /dev/null 2>&1
+        EXIT_CODE=$?
+        set -e
+        if [ "$EXIT_CODE" -ne 0 ]; then
+          echo "::error::Cannot dispatch pr-review: PR #$PR_NUMBER does not exist in $REPO"
+          exit 1
+        fi
+        echo "✅ PR #$PR_NUMBER confirmed in $REPO"
+
     - name: Dispatch pr-review agentic workflow
       if: inputs.agentic-workflow-repo != ''
       uses: lhuasheng/shared-sdlc/actions/dispatch-agentic@main
