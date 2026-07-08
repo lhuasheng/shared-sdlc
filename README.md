@@ -176,6 +176,7 @@ See `DEPRECATIONS.md` for scripts and actions scheduled for removal.
 
 | Document | Description |
 |---|---|
+| [`docs/triggers.md`](docs/triggers.md) | **Start here** — every trigger, the chain it fires, and how to verify it |
 | [`docs/playbook.md`](docs/playbook.md) | Complete framework reference |
 | [`docs/context-layer.md`](docs/context-layer.md) | Shared context contracts |
 | [`docs/label-taxonomy.md`](docs/label-taxonomy.md) | Label definitions |
