@@ -40,8 +40,7 @@ cd "$NAME"
 echo "Removing legacy template workflows (if present)..."
 git rm -q --ignore-unmatch \
   .github/workflows/pr-review.yml \
-  .github/workflows/weekly-review.yml \
-  .github/workflows/setup-repo.yml
+  .github/workflows/weekly-review.yml
 
 echo "Syncing shared-sdlc caller workflows into ${REPO}..."
 mkdir -p .github/workflows
