@@ -1,0 +1,30 @@
+# .github/workflows/ai-pr-review.yml
+# Thin caller workflow — AI PR Review (Pattern 4)
+# Copy this file into your project repository's .github/workflows/ directory.
+# Requires: GITHUB_TOKEN (auto-provided). The compiled agentic .lock.yml files
+# must be vendored into this repo (new-project.sh does this).
+
+name: AI PR Review Caller
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: write
+
+jobs:
+  ai-review:
+    name: Dispatch AI PR Review
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/ai-review')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lhuasheng/shared-sdlc/actions/ai-pr-review@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          agentic-workflow-repo: ${{ github.repository }}
+          agentic-workflow-ref: main

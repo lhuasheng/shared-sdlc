@@ -5,10 +5,10 @@
 // - Opens an onboarding PR
 //
 // Requires env: GH_TOKEN, TARGET_REPO (owner/repo).
-// Optional env: AGENTIC_REPO (default: lhuasheng/shared-agentic),
-//               AGENTIC_REF (default: main),
-//               SHARED_SDLC_REPO (default: lhuasheng/shared-sdlc),
-//               SHARED_SDLC_REF (default: main).
+// Optional env: SHARED_SDLC_REPO (default: lhuasheng/shared-sdlc),
+//               SHARED_SDLC_REF (default: main),
+//               AGENTIC_REPO / AGENTIC_REF (default: same as shared-sdlc —
+//               the agentic workflow sources live in shared-sdlc).
 
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, readdirSync, readFileSync } from 'node:fs';
@@ -21,10 +21,11 @@ if (!targetRepo) {
   process.exit(1);
 }
 
-const agenticRepo = process.env.AGENTIC_REPO || 'lhuasheng/shared-agentic';
-const agenticRef = process.env.AGENTIC_REF || 'main';
 const sharedSdlcRepo = process.env.SHARED_SDLC_REPO || 'lhuasheng/shared-sdlc';
 const sharedSdlcRef = process.env.SHARED_SDLC_REF || 'main';
+// Agentic workflow sources live in shared-sdlc itself.
+const agenticRepo = process.env.AGENTIC_REPO || sharedSdlcRepo;
+const agenticRef = process.env.AGENTIC_REF || sharedSdlcRef;
 const branch = `onboarding/ai-sdlc-${Date.now()}`;
 
 function gh(args) {

@@ -2,7 +2,7 @@
 
 This directory contains [JSON Schema draft 2020-12](https://json-schema.org/draft/2020-12/schema)
 definitions for all structured artifacts exchanged between the deterministic
-(**shared-sdlc**) and reasoning (**shared-agentic**) layers of the AI-SDLC
+(**actions**) and reasoning (**agentic**) layers of the AI-SDLC
 framework.
 
 ---

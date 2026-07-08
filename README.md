@@ -7,13 +7,18 @@ Development Lifecycle (AI-SDLC) Framework**.
 Every project repo points its thin workflow files at the actions in this repo,
 so all gate logic lives in one place. Reasoning-heavy tasks are handled by
 [GitHub Agentic Workflows](https://github.github.com/gh-aw/) whose canonical
-sources live in
-[`lhuasheng/shared-agentic`](https://github.com/lhuasheng/shared-agentic);
-`new-project.sh` **vendors** each workflow's `.md` source and compiled
-`.lock.yml` into the project repo, so agentic runs happen locally with the
+sources — `.md` prompt + compiled `.lock.yml` — live **in this repo** under
+[`.github/workflows/`](.github/workflows/). `new-project.sh` **vendors** both
+files into each project repo, so agentic runs happen locally with the
 repo-scoped `GITHUB_TOKEN`. On-demand workflows (PR review, release notes)
 are dispatched by composite actions here, always targeting the compiled
 `*.lock.yml` filename.
+
+Because the workflow files sit in this repo's own `.github/workflows/`, they
+also **run here (dogfooding)**: new issues in shared-sdlc get auto-triaged,
+`/ai-review` works on shared-sdlc PRs, the weekly digest covers this repo,
+and a `v*` tag drafts release notes — so a broken workflow shows up here
+before any project vendors it.
 
 > **This repo must be public** (or accessible via a GitHub App) so that
 > project repos can reference `uses: org/shared-sdlc/...`.
@@ -23,6 +28,13 @@ are dispatched by composite actions here, always targeting the compiled
 ## What's in here
 
 ```
+.github/workflows/       ← CANONICAL agentic workflow sources (.md) + compiled .lock.yml
+                           (11 workflows; 4 vendored into every project by new-project.sh;
+                           they also run in this repo — dogfooding)
+  + ai-pr-review.yml / release.yml callers so /ai-review and tag-push
+    dispatch paths are exercised here too
+  + agentics-maintenance.yml (gh-aw housekeeping)
+
 actions/
   ci-gates/              ← Gate: lint, test, PR size, security, spec link; publishes ci-summary.json
   ai-pr-review/          ← Gate: /ai-review comment → dispatches pr-review agentic workflow
@@ -62,6 +74,11 @@ new-project.sh             ← Bootstraps a new project repo: template + callers
                              + vendored agentic .md/.lock.yml files
 
 docs/
+  org/                    ← Org-wide docs (moved from the retired lhuasheng/.github repo)
+    CONTRIBUTING.md         ← The 5 gates, workflow, Day-1 checklist
+    copilot-instructions.md ← Org-wide AI/Copilot rules
+    UNIFIED-ISSUE-TRACKING.md
+    adr-template.md
   playbook.md             ← Complete AI-SDLC framework reference
   audit-report.md         ← Repository audit (Wave 0)
   environment-check.md    ← Environment readiness guide
@@ -110,7 +127,7 @@ bash new-project.sh project-X
 
 This creates the repo from `project-template`, copies the thin caller
 workflows from `templates/`, vendors the agentic `.md` + compiled `.lock.yml`
-files from `shared-agentic` (no `gh aw compile` needed — locks are
+files from this repo (no `gh aw compile` needed — locks are
 precompiled; only recompile if you edit a vendored `.md`), and enables branch
 protection.
 
@@ -177,6 +194,8 @@ See `DEPRECATIONS.md` for scripts and actions scheduled for removal.
 | Document | Description |
 |---|---|
 | [`docs/triggers.md`](docs/triggers.md) | **Start here** — every trigger, the chain it fires, and how to verify it |
+| [`docs/agentic-workflows.md`](docs/agentic-workflows.md) | The workflow sources: authoring, inputs, safe-outputs, editing rules |
+| [`docs/org/CONTRIBUTING.md`](docs/org/CONTRIBUTING.md) | Org-wide gates, workflow, Day-1 checklist |
 | [`docs/playbook.md`](docs/playbook.md) | Complete framework reference |
 | [`docs/context-layer.md`](docs/context-layer.md) | Shared context contracts |
 | [`docs/label-taxonomy.md`](docs/label-taxonomy.md) | Label definitions |

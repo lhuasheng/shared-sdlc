@@ -6,23 +6,33 @@ of workflows and actions that runs, what token and permissions it needs, how
 to verify it worked, and what usually breaks.
 
 For the reasoning-layer workflow sources themselves, see the companion guide
-[`shared-agentic/TRIGGERS.md`](https://github.com/lhuasheng/shared-agentic/blob/main/TRIGGERS.md).
+[`docs/agentic-workflows.md`](agentic-workflows.md).
 
 ---
 
 ## How the whole system fits together
 
-Four repositories play distinct roles:
+Two repositories play distinct roles:
 
 ```
-lhuasheng/.github            ← org-wide docs and defaults (CONTRIBUTING, copilot-instructions, issue templates)
 lhuasheng/shared-sdlc        ← THIS REPO: deterministic gates (composite actions), thin caller
-                               templates, bootstrap scripts. Merge-blocking logic lives here.
-lhuasheng/shared-agentic     ← canonical agentic workflow sources: .md (prompt + frontmatter)
-                               and compiled .lock.yml (the actual GitHub Actions workflow)
-lhuasheng/project-X          ← a real project. Contains thin callers pointing at shared-sdlc
-                               actions, plus VENDORED copies of the agentic .md + .lock.yml
+                               templates, bootstrap scripts, org-wide docs (docs/org/), AND the
+                               canonical agentic workflow sources (.github/workflows/*.md +
+                               compiled .lock.yml). Merge-blocking logic lives here.
+lhuasheng/project-X          ← a real project, created from lhuasheng/project-template. Contains
+                               thin callers pointing at shared-sdlc actions, plus VENDORED
+                               copies of the agentic .md + .lock.yml
 ```
+
+(`project-template` is the seed repo `new-project.sh` instantiates; the
+former `shared-agentic` and `.github` repos are retired — their contents now
+live here under `.github/workflows/` and `docs/org/`.)
+
+**Dogfooding.** Because the agentic sources sit in this repo's own
+`.github/workflows/`, every workflow also runs *here*: shared-sdlc issues get
+triaged, `/ai-review` works on shared-sdlc PRs, the weekly digest covers this
+repo, and a `v*` tag drafts release notes. Trigger any of them in this repo
+to test the logic for free before projects vendor it.
 
 **The two layers.** Deterministic gates (lint, test, PR size, required status
 checks) are composite actions in this repo — they block merges and are
@@ -33,7 +43,7 @@ prompt with YAML frontmatter, compiled by `gh aw compile` into a hardened
 never blocks a merge, and every write goes through gh-aw `safe-outputs`.
 
 **Local vendoring, not cross-repo dispatch.** `new-project.sh` copies both
-the `.md` and the precompiled `.lock.yml` from shared-agentic into each
+the `.md` and the precompiled `.lock.yml` from this repo into each
 project's `.github/workflows/`. The workflows therefore run *inside the
 analyzed repo* with the auto-provided `GITHUB_TOKEN` — no PAT, no
 `ANTHROPIC_API_KEY`, no cross-repo permissions. Consumers never run
@@ -179,7 +189,7 @@ gh workflow run agentics-maintenance.yml -f operation=activity_report
 
 ## Catalogue triggers (not vendored by default)
 
-`shared-agentic` also ships workflows a project can vendor when needed; their
+This repo also ships workflows a project can vendor when needed; their
 triggers activate as soon as both `.md` + `.lock.yml` are copied in:
 
 | Workflow | Trigger |

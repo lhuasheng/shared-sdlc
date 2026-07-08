@@ -1,7 +1,7 @@
 # Shared Context Layer
 
 The **shared context layer** is the contract that allows the deterministic
-**shared-sdlc** layer and the reasoning **shared-agentic** layer to exchange
+**shared-sdlc** layer and the reasoning **agentic** layer to exchange
 information reliably without tight coupling.
 
 This document is the single reference for all context contracts. Any change to
