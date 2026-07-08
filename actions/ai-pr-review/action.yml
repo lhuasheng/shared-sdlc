@@ -59,7 +59,7 @@ runs:
           exit 1
         fi
         set +e
-        gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '.number' > /dev/null 2>&1
+        gh api "repos/$REPO/pulls/$PR_NUMBER" > /dev/null 2>&1
         EXIT_CODE=$?
         set -e
         if [ "$EXIT_CODE" -ne 0 ]; then
